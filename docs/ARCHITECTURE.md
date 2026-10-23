@@ -67,9 +67,22 @@ Aufzucht- und Evolutionsregeln sollen mit Daten arbeiten und keine Abhängigkeit
 
 ## Szenenübergreifender Zustand und Speichern
 
-Der erste Prototyp benötigt keinen globalen Zustandsdienst. Sobald Schauplatzwechsel eingeführt werden, muss der Partnerzustand über den Wechsel erhalten bleiben. Dafür reicht voraussichtlich ein kleiner gemeinsamer Spielzustand; ein Autoload ist eine mögliche Umsetzung.
+Der Segmentprototyp verwendet `SceneManager` als Autoload (`scripts/scene_manager.gd`). Er lädt jedes Segment frisch, blendet kurz nach Schwarz und setzt den lokalen Spieler an einen benannten `Marker3D` unter `EntryPoints`. Jede Segmentdatei enthält ihren eigenen `Player` (`CharacterBody3D`, Gruppe `player`) und eine feste Kamera. Gegner, NPCs und Ereignisse können später als lokale Knoten ergänzt werden; der Manager kennt deren Regeln nicht.
 
-**OFFEN:** Autoload-Einsatz, Speicherumfang, Dateiformat, Speicherzeitpunkte, Slots und Versionsbehandlung. Szenenknoten sollen nicht das dauerhafte Speicherformat bilden.
+`SegmentExit` (`scripts/segment_exit.gd`) ist ein wiederverwendbarer `Area3D`-Trigger mit `target_scene` und `target_entry`. Die Eintrittspunkte liegen außerhalb der Übergangsflächen. Während Blende und Szenenwechsel sperrt der Manager weitere Übergänge und die Spielerbewegung. Zielszene und Eintrittspunkt werden vor dem Wechsel geprüft. Die WASD-Steuerung bleibt unverändert.
+
+Temporäre Segmentzustände werden beim erneuten Betreten zurückgesetzt. Dauerhafte Spielzustände wie Rekrutierungen, abgeschlossene Quests und wichtige Ereignisse sollen später unabhängig von den Segmentknoten gehalten und gespeichert werden. Dafür ist noch kein Persistenz- oder Speichersystem implementiert. Auch ein künftiger Partnerzustand muss getrennt vom lokalen Szenenaufbau erhalten bleiben.
+
+**OFFEN:** Struktur des dauerhaften Spielzustands, Speicherumfang, Dateiformat, Speicherzeitpunkte, Slots und Versionsbehandlung. Szenenknoten sollen nicht das dauerhafte Speicherformat bilden.
+
+### Segmentwechsel selbst testen
+
+1. Projekt mit F5 starten (`forest_clearing.tscn`, Segment A).
+2. Dem Weg mit W nach oben zur Beschriftung „Waldpfad (W)“ folgen. Nach der kurzen Schwarzblende erscheint der Spieler im gelblicheren Segment B mit dem großen Felsblock.
+3. Ohne Eingabe bleibt der Spieler am Eintrittspunkt `FromForestClearing` stehen. Mit S zum unteren Wegende „Lichtung (S)“ laufen, um zu A zurückzukehren.
+4. In A erscheint der Spieler bei `FromForestPath`, etwas unterhalb des Ausgangs. Er bleibt dort stehen, bis eine neue Eingabe erfolgt. W führt erneut nach B.
+
+Die Kameras bleiben fest. Die bisherigen Kollisionsränder bleiben als Sicherheitsbegrenzungen bestehen; die Übergangsflächen liegen kurz davor. Segment B (`forest_path.tscn`) kann zum Testen auch direkt mit F6 gestartet werden.
 
 ## Mögliche spätere Ordneraufteilung
 
