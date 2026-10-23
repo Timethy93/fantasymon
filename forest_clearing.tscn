@@ -1,3 +1,153 @@
 [gd_scene format=3 uid="uid://cjuttdlo2qvfx"]
 
+[ext_resource type="Script" uid="uid://ck7odk7jeh54q" path="res://scripts/player.gd" id="1_jgtll"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rvrhh"]
+albedo_color = Color(0.22, 0.36, 0.25, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_r3b4v"]
+size = Vector3(16, 0.5, 12)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_j3m8a"]
+size = Vector3(16, 0.5, 12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i477c"]
+albedo_color = Color(0.4, 0.44, 0.45, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_7ar1p"]
+size = Vector3(16.5, 0.6, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_prhu0"]
+size = Vector3(16.5, 0.6, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lhbaq"]
+albedo_color = Color(0.4, 0.44, 0.45, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_kajvt"]
+size = Vector3(16.5, 0.6, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pyt72"]
+size = Vector3(16.5, 0.6, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yi5jn"]
+albedo_color = Color(0.4, 0.44, 0.45, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_faxtd"]
+size = Vector3(0.5, 0.6, 12)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_3a7rk"]
+size = Vector3(0.5, 0.6, 12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_viivd"]
+albedo_color = Color(0.4, 0.44, 0.45, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_a1c13"]
+size = Vector3(0.5, 0.6, 12)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_f36kn"]
+size = Vector3(0.5, 0.6, 12)
+
+[sub_resource type="Environment" id="Environment_l1t57"]
+background_mode = 1
+background_color = Color(0.12, 0.16, 0.2, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.75, 0.82, 1, 1)
+ambient_light_energy = 0.65
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_03fqj"]
+albedo_color = Color(0.95, 0.55, 0.15, 1)
+roughness = 0.9
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_oj6dc"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_6n47w"]
+radius = 0.35
+height = 1.8
+
 [node name="ForestClearing" type="Node3D" unique_id=1182294666]
+
+[node name="WorldGeometry" type="Node3D" parent="." unique_id=704773186]
+
+[node name="Ground" type="StaticBody3D" parent="WorldGeometry" unique_id=922527436]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="WorldGeometry/Ground" unique_id=1437426438]
+material_override = SubResource("StandardMaterial3D_rvrhh")
+mesh = SubResource("BoxMesh_r3b4v")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldGeometry/Ground" unique_id=1521125976]
+shape = SubResource("BoxShape3D_j3m8a")
+
+[node name="Bounds" type="Node3D" parent="WorldGeometry" unique_id=1810801881]
+
+[node name="North" type="StaticBody3D" parent="WorldGeometry/Bounds" unique_id=561788947]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, -6)
+
+[node name="Visual" type="MeshInstance3D" parent="WorldGeometry/Bounds/North" unique_id=33836263]
+material_override = SubResource("StandardMaterial3D_i477c")
+mesh = SubResource("BoxMesh_7ar1p")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldGeometry/Bounds/North" unique_id=1977562393]
+shape = SubResource("BoxShape3D_prhu0")
+
+[node name="South" type="StaticBody3D" parent="WorldGeometry/Bounds" unique_id=1529799003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 6)
+
+[node name="Visual" type="MeshInstance3D" parent="WorldGeometry/Bounds/South" unique_id=1140469086]
+material_override = SubResource("StandardMaterial3D_lhbaq")
+mesh = SubResource("BoxMesh_kajvt")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldGeometry/Bounds/South" unique_id=320379632]
+shape = SubResource("BoxShape3D_pyt72")
+
+[node name="West" type="StaticBody3D" parent="WorldGeometry/Bounds" unique_id=1277972326]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.3, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="WorldGeometry/Bounds/West" unique_id=975731016]
+material_override = SubResource("StandardMaterial3D_yi5jn")
+mesh = SubResource("BoxMesh_faxtd")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldGeometry/Bounds/West" unique_id=884655932]
+shape = SubResource("BoxShape3D_3a7rk")
+
+[node name="East" type="StaticBody3D" parent="WorldGeometry/Bounds" unique_id=2026654163]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.3, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="WorldGeometry/Bounds/East" unique_id=2059904389]
+material_override = SubResource("StandardMaterial3D_viivd")
+mesh = SubResource("BoxMesh_a1c13")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldGeometry/Bounds/East" unique_id=1732450911]
+shape = SubResource("BoxShape3D_f36kn")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=94309883]
+unique_name_in_owner = true
+transform = Transform3D(0.8741963, -0.29794562, 0.38341784, 0, 0.78961986, 0.6135963, -0.4855727, -0.53640366, 0.69028276, 10, 16, 18)
+current = true
+fov = 50.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=465692107]
+transform = Transform3D(0.8660254, 0.40957603, -0.28678823, 0, 0.57357645, 0.81915206, 0.5, -0.7094065, 0.49673176, 0, 0, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=152215008]
+environment = SubResource("Environment_l1t57")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=2021395090]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+script = ExtResource("1_jgtll")
+
+[node name="Visual" type="MeshInstance3D" parent="Player" unique_id=1077878182]
+material_override = SubResource("StandardMaterial3D_03fqj")
+mesh = SubResource("CapsuleMesh_oj6dc")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=511862110]
+shape = SubResource("CapsuleShape3D_6n47w")
