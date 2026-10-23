@@ -8,6 +8,8 @@ Festgelegt sind Godot 4.7.2, GDScript, vorgerenderte 2D-Hintergründe mit animie
 
 ## 1. Spielbarer Prototyp: Waldlichtung
 
+**Technischer Zwischenstand:** Monster-Foundation Phase 1 ist als separates Datenmodell mit Tests umgesetzt; siehe [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md). Sichtbarer Begleiter, Folgebewegung und Animationssteuerung sind weiterhin offen. Dieser Zwischenstand schließt die gesamte folgende Prototyp-Abnahme noch nicht ab.
+
 **Ziel:** Das Zusammenspiel aus Hintergrund, Kamera, Bewegung, Kollision und Monsterbegleiter praktisch prüfen.
 
 1. Eine kleine Waldlichtung mit vorläufigem vorgerendertem 2D-Hintergrund einrichten.

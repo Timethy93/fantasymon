@@ -61,11 +61,11 @@ Die Partnersteuerung erhält eine Referenz auf den Spieler. Zunächst genügt ei
 
 ## Daten und Spiellogik
 
-Für spätere statische Definitionen bieten sich kleine Godot-Resources an, beispielsweise für Monsterformen oder Evolutionsbedingungen. Veränderliche Daten eines konkreten Partners bleiben davon getrennt, damit Training keine gemeinsam genutzten Definitionen verändert.
+Monster-Phase 1 verwendet editierbare `MonsterDefinition`-Resources mit stabilen IDs, Stufe, Base Stats und visueller PackedScene. `MonsterStats` hält die sechs Attribute. `MonsterInstance` ist ein RefCounted-Datenobjekt mit eigener Identität, kopierten individuellen Stats und Current HP/MP. `MonsterRegistry` lädt Definitionen bedarfsgesteuert aus `data/monsters/definitions/<id>.tres`; ein zusätzlicher Autoload ist nicht erforderlich. Die Daten sind noch nicht in die Waldsegmente eingebunden. Details, Erweiterungsregeln und Tests stehen in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md).
 
 Aufzucht- und Evolutionsregeln sollen mit Daten arbeiten und keine Abhängigkeit von Kamera oder Charaktermodell benötigen. Eine Evolution kann dadurch später die sichtbare Form wechseln, ohne die gesamte Aufzuchtlogik zu ersetzen.
 
-**OFFEN:** Datenfelder, Formate und Bedingungsmodell. Ressourcen werden erst angelegt, wenn die jeweilige Mechanik konkrete Daten benötigt.
+**OFFEN:** Weitere Datenfelder für Pflege, Zeit und Evolutionsbedingungen sowie deren konkrete Regeln. Die bereits beschlossenen Zukunftsentscheidungen und die Abgrenzung zur implementierten Foundation sind in `MONSTER_SYSTEM_DESIGN.md` festgehalten.
 
 ## Szenenübergreifender Zustand und Speichern
 

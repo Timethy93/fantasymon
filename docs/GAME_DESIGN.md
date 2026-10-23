@@ -33,6 +33,8 @@ Der erste spielbare Schauplatz ist eine kleine Waldlichtung.
 
 ## Spieler und Monsterpartner
 
+Die technische Monster-Foundation (Phase 1) ist in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md) beschrieben. Sie implementiert Artdefinitionen, individuelle Stats, Current HP/MP und ID-basiertes Laden, noch keinen sichtbaren Begleiter. Dasselbe Dokument enthält die inzwischen beschlossenen zukünftigen Regeln; diese konkretisieren die folgenden früheren OFFEN-Markierungen für Monsterwerte, sieben Evolutionsstufen, Pflege, Schlaf und Tod, ohne die Simulation bereits umzusetzen.
+
 Der Spieler bewegt sich durch die Welt und wird von einem Monsterpartner begleitet. Der Partner ist der Mittelpunkt der Aufzucht und des Kampfsystems.
 
 **OFFEN:** Eingabegeräte, Steuerungsdetails, Bewegungsgeschwindigkeit, Interaktionsreichweite, Verhalten bei Hindernissen und die Möglichkeit, den Partner zu wechseln.

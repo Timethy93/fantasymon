@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="MonsterDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/monsters/monster_definition.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/monsters/monster_stats.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/monsters/visuals/fenri_placeholder.tscn" id="3"]
+
+[sub_resource type="Resource" id="Stats"]
+script = ExtResource("2")
+hp = 100
+mp = 30
+atk = 18
+defense = 12
+speed = 25
+brain = 14
+
+[resource]
+script = ExtResource("1")
+monster_id = &"fenri"
+display_name_key = &"MONSTER_FENRI_NAME"
+evolution_stage = 3
+base_stats = SubResource("Stats")
+visual_scene = ExtResource("3")
+
