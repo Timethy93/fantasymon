@@ -31,7 +31,9 @@ ForestClearing (Node3D)
 
 Die Kamera bewegt sich im ersten Prototyp nicht. Position, Projektion und Hintergrund werden gemeinsam eingerichtet, damit sichtbare Wege mit der unsichtbaren Geometrie übereinstimmen. Die Kollisionskörper erhalten keine sichtbaren Spiel-Meshes; zur Entwicklung kann die Kollisionsanzeige genutzt werden.
 
-**OFFEN:** Orthografische oder perspektivische Projektion, Hintergrund als 2D-Ebene oder 3D-Fläche, Render-Ebenen, Vordergrundverdeckung, Schatten und Beleuchtung. Diese Fragen werden durch einen kleinen Darstellungstest entschieden, bevor weitere Schauplätze entstehen.
+Für den ersten 2.5D-Prototyp festgelegt: perspektivische feste Kamera, vorgerendertes PNG, echte 3D-Figuren und Collider sowie einfache 3D-Verdeckungsmeshes. Die Ausgabe bleibt bei 16:9 mit Balken auf abweichenden Seitenverhältnissen. `forest_clearing.tscn` verwendet diese Darstellung; `forest_path.tscn` bleibt vorerst dreidimensional. Technischer Aufbau, Exportanleitung, Tests und Grenzen stehen in [PRERENDERED_FOREST_POC.md](PRERENDERED_FOREST_POC.md).
+
+**OFFEN:** Zusätzliche Vordergrundebenen für komplexe Motive, Umgebungsanimationen, dynamische Kontaktschatten und finale Beleuchtung. Eine Tiefenkarte ist im ersten Prototyp nicht vorgesehen.
 
 ## Verantwortlichkeiten
 
