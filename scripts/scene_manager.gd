@@ -2,6 +2,7 @@ class_name FantasyMonSceneManager
 extends Node
 
 signal transition_finished(scene_path: String, entry_name: StringName)
+signal travel_failed(message_key: String)
 
 const FADE_SECONDS := 0.18
 
@@ -22,15 +23,15 @@ func _ready() -> void:
 
 
 func travel_to(scene_path: String, entry_name: StringName) -> void:
-	if transition_in_progress:
+	if get_tree().paused or transition_in_progress:
 		return
 	# Validate the destination before touching the running segment.
 	if not ResourceLoader.exists(scene_path, "PackedScene"):
-		push_error("Segment not found: %s" % scene_path)
+		_report_error("SEGMENT_LOAD_FAILED", scene_path)
 		return
 	var packed := load(scene_path) as PackedScene
 	if packed == null:
-		push_error("Invalid segment: %s" % scene_path)
+		_report_error("SEGMENT_LOAD_FAILED", scene_path)
 		return
 	var preview := packed.instantiate()
 	var entry_path := NodePath("EntryPoints/" + String(entry_name))
@@ -40,7 +41,7 @@ func travel_to(scene_path: String, entry_name: StringName) -> void:
 	)
 	preview.free()
 	if not valid:
-		push_error("Segment needs Player and entry %s: %s" % [entry_name, scene_path])
+		_report_error("SEGMENT_ENTRY_INVALID", "%s: %s" % [scene_path, entry_name])
 		return
 
 	transition_in_progress = true
@@ -53,7 +54,7 @@ func travel_to(scene_path: String, entry_name: StringName) -> void:
 
 	var error := get_tree().change_scene_to_packed(packed)
 	if error != OK:
-		push_error("Could not change segment: %s (%s)" % [scene_path, error])
+		_report_error("SEGMENT_LOAD_FAILED", "%s (%s)" % [scene_path, error])
 		old_player.set_physics_process(was_processing)
 		await _fade_to(0.0)
 		_finish_transition()
@@ -79,6 +80,11 @@ func _fade_to(alpha: float) -> void:
 	var tween := create_tween()
 	tween.tween_property(_fade, "modulate:a", alpha, FADE_SECONDS)
 	await tween.finished
+
+
+func _report_error(message_key: String, detail: String) -> void:
+	push_error("%s (%s)" % [tr(message_key), detail])
+	travel_failed.emit(message_key)
 
 
 func _finish_transition() -> void:

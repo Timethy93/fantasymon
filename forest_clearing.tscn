@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://ck7odk7jeh54q" path="res://scripts/player.gd" id="1_jgtll"]
 [ext_resource type="Script" uid="uid://c020idyr0aidi" path="res://scripts/segment_exit.gd" id="2_rvrhh"]
+[ext_resource type="Script" uid="uid://7kjtf0bnc2cc" path="res://scripts/world_exit_label.gd" id="3_r3b4v"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rvrhh"]
 albedo_color = Color(0.16, 0.27, 0.12, 1)
@@ -965,6 +966,9 @@ shape = SubResource("BoxShape3D_r3b4v")
 [node name="ExitLabel" type="Label3D" parent="." unique_id=347060727]
 transform = Transform3D(1, 0, 0, 0, 0.49999997, 0.86602545, 0, -0.86602545, 0.49999997, -0.8, 0.15, -4.7)
 pixel_size = 0.008
-text = "Waldpfad (W)"
+text = "EXIT_FOREST_PATH"
 font_size = 48
 outline_size = 8
+script = ExtResource("3_r3b4v")
+text_key = "EXIT_FOREST_PATH"
+movement_action = "move_forward"

@@ -97,6 +97,29 @@ docs/         # Design, Architektur und Planung
 
 Diese Aufteilung ist ein Vorschlag und wird erst bei der Implementierung nach Bedarf angelegt. Ein zusätzliches Framework oder Plugin ist nicht festgelegt.
 
+## Einstellungen und Übersetzungen
+
+`GameSettings` (`scripts/game_settings.gd`) hält Sprache, vier physische Bewegungstasten, Fenster-/Vollbildmodus und Master-Lautstärke. Änderungen gelten sofort und werden als `ConfigFile` unter `user://settings.cfg` gespeichert. Beim Start werden die Werte geprüft und angewendet; ohne Datei gelten Englisch, WASD, Fenstermodus und 100 Prozent Lautstärke. Defekte Konfigurationen verwenden Standardwerte. Doppelte Bewegungstasten und ESC als Bewegungstaste werden abgewiesen; ESC bleibt für das Menü reserviert.
+
+`SettingsMenu` ist eine einzige Autoload-Szene (`ui/settings_menu.tscn`) mit echten Controls. Ihre Logik (`ui/settings_menu.gd`) bedient den Einstellungsdienst. Sie bleibt bei Segmentwechseln bestehen. ESC öffnet und schließt das Menü; während einer Neubelegung bricht ESC zuerst die Eingabe ab. Tab, Pfeile und Enter sowie die Maus bedienen die Controls. Eine Neubelegung beginnt durch Aktivieren der betreffenden Tastenschaltfläche. Das Panel passt sich dem verfügbaren Fenster an; Schrift und Bedienelemente werden in kleinen Fenstern vergrößert, um die vorhandene Canvas-Skalierung auszugleichen. Die Reiterinhalte sind scrollbar und folgen dem Tastaturfokus.
+
+Das Menü läuft mit `PROCESS_MODE_ALWAYS` und pausiert den SceneTree. Spielerphysik und Area3D-Übergänge ruhen, und `SceneManager.travel_to()` verweigert Aufrufe während der Pause ausdrücklich. Während einer laufenden Segmentblende kann das Menü nicht geöffnet werden. Die Bewegungsimplementierung und Kameras bleiben unverändert.
+
+**Verbindliche Textregel:** Neue spielerseitige Texte sind immer für Übersetzungen vorzubereiten. Stabile Schlüssel und vollständige englische/deutsche Einträge gehören in `translations/strings.csv`. Godot importiert daraus die in den Projekteinstellungen registrierten Translation-Ressourcen. Englisch ist die Standardsprache, `TranslationServer` schaltet sofort um. Statische Controls erhalten Schlüssel; dynamische Texte verwenden `tr()` mit benannten Platzhaltern und aktualisieren sich bei `NOTIFICATION_TRANSLATION_CHANGED`. Auch Hinweise, Fehler und Tastennamen gehören dazu.
+
+`WorldExitLabel` (`scripts/world_exit_label.gd`) zeigt die übersetzte Segmentbeschriftung mit der tatsächlich belegten Taste. Es reagiert auf Sprach- und Einstellungsänderungen. Segment-Ladefehler werden als Schlüssel über `SceneManager.travel_failed` an einen übersetzten UI-Hinweis gegeben; technische Details bleiben zusätzlich im Diagnoseprotokoll.
+
+Der Referenzpfad `mocks/settings_menu.png` war nicht vorhanden; die vorhandene Montage `mocks/image.png` diente als Layout- und Farbreferenz. Das Menü übernimmt nur vereinbarte Einstellungen, ohne weitere Mechaniken aus dem Mockup.
+
+### Einstellungsmenü selbst testen
+
+1. Mit F5 starten, ESC drücken. Bewegungseingaben und Segmentwechsel müssen bis zum Schließen pausieren.
+2. Unter General/Allgemein zwischen English und Deutsch wechseln. Menü und Wegbeschriftung ändern sich sofort.
+3. Unter Controls/Steuerung eine Bewegungsschaltfläche aktivieren und eine freie Taste drücken. Eine doppelte Taste wird abgewiesen; ESC bricht die Erfassung ab. Mit der neuen Taste laufen und den aktualisierten Wegweiser prüfen.
+4. Master-Lautstärke ändern, Fenster/Vollbild wechseln, Spiel stoppen und neu starten. Die Werte einschließlich Belegung und Sprache bleiben erhalten.
+5. Beide Segmente besuchen und dort ESC testen. Der Rückweg und die festen Kameras bleiben erhalten.
+6. Kleines und großes Spielfenster prüfen. Hinweis: Godots eingebettete Spielansicht erzwingt Fenstermodus und Fenstergröße. Den echten Vollbildwechsel in einem eigenständigen Spielfenster prüfen.
+
 ## Prüfung während der Entwicklung
 
 Der erste Prototyp wird in Godot auf Kamerabild, Bewegungsgefühl, Kollisionen und Begleitung geprüft. Später lohnen sich gezielte Regeltests für Evolutionsgrenzen und Zustandsänderungen, sobald die Regeln feststehen. Jede Roadmap-Stufe soll einzeln spielbar und überprüfbar bleiben.

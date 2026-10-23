@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://ck7odk7jeh54q" path="res://scripts/player.gd" id="1_jgtll"]
 [ext_resource type="Script" uid="uid://c020idyr0aidi" path="res://scripts/segment_exit.gd" id="2_7qgdw"]
+[ext_resource type="Script" uid="uid://7kjtf0bnc2cc" path="res://scripts/world_exit_label.gd" id="3_a4acm"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rvrhh"]
 albedo_color = Color(0.22, 0.28, 0.12, 1)
@@ -984,6 +985,9 @@ shape = SubResource("BoxShape3D_omur8")
 [node name="ExitLabel" type="Label3D" parent="." unique_id=692432122]
 transform = Transform3D(1, 0, 0, 0, 0.49999997, 0.86602545, 0, -0.86602545, 0.49999997, 0.5, 0.15, 4.6)
 pixel_size = 0.008
-text = "Lichtung (S)"
+text = "EXIT_FOREST_CLEARING"
 font_size = 48
 outline_size = 8
+script = ExtResource("3_a4acm")
+text_key = "EXIT_FOREST_CLEARING"
+movement_action = "move_backward"
