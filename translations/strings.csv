@@ -40,3 +40,4 @@ KEY_END,End,Ende
 KEY_PAGEUP,Page Up,Bild hoch
 KEY_PAGEDOWN,Page Down,Bild runter
 KEY_INSERT,Insert,Einfg
+BACKGROUND_CALIBRATION_INVALID,The background does not match this area's camera. Rebuild the background.,Der Hintergrund passt nicht zur Kamera dieses Bereichs. Hintergrund neu erzeugen.
