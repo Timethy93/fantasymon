@@ -1,0 +1,327 @@
+[gd_scene format=3 uid="uid://daveuihubeiyo"]
+
+[ext_resource type="Script" uid="uid://b3n2vnyyrys6l" path="res://ui/settings_menu.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="Focus"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.04, 0.18, 0.26, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 0.77, 1, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="Hover"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.08, 0.23, 0.32, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.24, 0.67, 0.88, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="Button"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.08, 0.11, 0.13, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.25, 0.3, 0.32, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="Panel"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.045, 0.065, 0.08, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.32, 0.34, 0.33, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="Tab"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.06, 0.09, 0.11, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.22, 0.28, 0.3, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="Theme" id="Theme"]
+default_font_size = 18
+Button/colors/font_color = Color(0.94, 0.92, 0.85, 1)
+Button/styles/focus = SubResource("Focus")
+Button/styles/hover = SubResource("Hover")
+Button/styles/normal = SubResource("Button")
+Button/styles/pressed = SubResource("Hover")
+Label/colors/font_color = Color(0.94, 0.92, 0.85, 1)
+OptionButton/styles/focus = SubResource("Focus")
+OptionButton/styles/hover = SubResource("Hover")
+OptionButton/styles/normal = SubResource("Button")
+OptionButton/styles/pressed = SubResource("Hover")
+PanelContainer/styles/panel = SubResource("Panel")
+TabContainer/styles/panel = SubResource("Tab")
+TabContainer/styles/tab_focus = SubResource("Focus")
+TabContainer/styles/tab_selected = SubResource("Hover")
+TabContainer/styles/tab_unselected = SubResource("Tab")
+
+[node name="SettingsMenu" type="CanvasLayer" unique_id=146565820]
+process_mode = 3
+layer = 90
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="." unique_id=1534234152]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme")
+
+[node name="Backdrop" type="ColorRect" parent="Root" unique_id=859776579]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.02, 0.025, 0.75)
+
+[node name="Panel" type="PanelContainer" parent="Root" unique_id=2049660062]
+unique_name_in_owner = true
+layout_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Root/Panel" unique_id=1398277829]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="Content" type="VBoxContainer" parent="Root/Panel/Margin" unique_id=956293799]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/Panel/Margin/Content" unique_id=148220118]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "SETTINGS_TITLE"
+
+[node name="Tabs" type="TabContainer" parent="Root/Panel/Margin/Content" unique_id=462849836]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="General" type="ScrollContainer" parent="Root/Panel/Margin/Content/Tabs" unique_id=990345292]
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+metadata/_tab_index = 0
+
+[node name="Rows" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/General" unique_id=557520601]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="LanguageRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/General/Rows" unique_id=2127739609]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Root/Panel/Margin/Content/Tabs/General/Rows/LanguageRow" unique_id=2001127063]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LANGUAGE"
+autowrap_mode = 2
+
+[node name="Language" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/General/Rows/LanguageRow" unique_id=1242161897]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+
+[node name="DisplayModeRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/General/Rows" unique_id=276208106]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Root/Panel/Margin/Content/Tabs/General/Rows/DisplayModeRow" unique_id=1164157628]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "DISPLAY_MODE"
+autowrap_mode = 2
+
+[node name="DisplayMode" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/General/Rows/DisplayModeRow" unique_id=1514913765]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+
+[node name="Controls" type="ScrollContainer" parent="Root/Panel/Margin/Content/Tabs" unique_id=1109591236]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+metadata/_tab_index = 1
+
+[node name="Rows" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Controls" unique_id=143864063]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="ForwardRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows" unique_id=2016209814]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/ForwardRow" unique_id=1410095522]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "MOVE_FORWARD"
+autowrap_mode = 2
+
+[node name="Forward" type="Button" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/ForwardRow" unique_id=2053740920]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+
+[node name="BackwardRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows" unique_id=1333623199]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/BackwardRow" unique_id=1157562223]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "MOVE_BACKWARD"
+autowrap_mode = 2
+
+[node name="Backward" type="Button" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/BackwardRow" unique_id=1165223164]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+
+[node name="LeftRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows" unique_id=281384333]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/LeftRow" unique_id=1057584113]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "MOVE_LEFT"
+autowrap_mode = 2
+
+[node name="Left" type="Button" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/LeftRow" unique_id=1638681591]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+
+[node name="RightRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows" unique_id=12218703]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/RightRow" unique_id=86822092]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "MOVE_RIGHT"
+autowrap_mode = 2
+
+[node name="Right" type="Button" parent="Root/Panel/Margin/Content/Tabs/Controls/Rows/RightRow" unique_id=1977233507]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+
+[node name="Audio" type="ScrollContainer" parent="Root/Panel/Margin/Content/Tabs" unique_id=2096138869]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+metadata/_tab_index = 2
+
+[node name="Rows" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Audio" unique_id=1805998173]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="VolumeRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Audio/Rows" unique_id=1062285]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Root/Panel/Margin/Content/Tabs/Audio/Rows/VolumeRow" unique_id=1839486022]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "MASTER_VOLUME"
+autowrap_mode = 2
+
+[node name="Volume" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Audio/Rows/VolumeRow" unique_id=508480461]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+value = 100.0
+
+[node name="VolumeValue" type="Label" parent="Root/Panel/Margin/Content/Tabs/Audio/Rows" unique_id=132281320]
+unique_name_in_owner = true
+layout_mode = 2
+text = "100%"
+horizontal_alignment = 2
+
+[node name="Status" type="Label" parent="Root/Panel/Margin/Content" unique_id=80258736]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SETTINGS_SAVED"
+autowrap_mode = 2
+
+[node name="Hint" type="Label" parent="Root/Panel/Margin/Content" unique_id=1059174891]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "MENU_HINT"
+autowrap_mode = 2
+
+[node name="Close" type="Button" parent="Root/Panel/Margin/Content" unique_id=292895858]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "CLOSE"
+
+[node name="Notice" type="Label" parent="." unique_id=1999781765]
+unique_name_in_owner = true
+visible = false
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 700.0
+offset_bottom = 80.0
+theme = SubResource("Theme")
+autowrap_mode = 2

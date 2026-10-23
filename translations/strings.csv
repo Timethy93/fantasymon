@@ -1,0 +1,42 @@
+keys,en,de
+SETTINGS_TITLE,Settings,Einstellungen
+TAB_GENERAL,General,Allgemein
+TAB_CONTROLS,Controls,Steuerung
+TAB_AUDIO,Audio,Audio
+LANGUAGE,Language,Sprache
+LANGUAGE_EN,English,English
+LANGUAGE_DE,Deutsch,Deutsch
+DISPLAY_MODE,Display mode,Anzeigemodus
+MODE_WINDOWED,Windowed,Fenster
+MODE_FULLSCREEN,Fullscreen,Vollbild
+MASTER_VOLUME,Master volume,Gesamtlautstärke
+MOVE_FORWARD,Move forward,Vorwärts
+MOVE_BACKWARD,Move backward,Rückwärts
+MOVE_LEFT,Move left,Nach links
+MOVE_RIGHT,Move right,Nach rechts
+CLOSE,Close,Schließen
+MENU_HINT,Esc: close · Tab / arrows: navigate · Enter: select,Esc: schließen · Tab / Pfeile: navigieren · Enter: auswählen
+SETTINGS_SAVED,Changes are saved automatically.,Änderungen werden automatisch gespeichert.
+PRESS_KEY,Press a movement key. Esc cancels.,Bewegungstaste drücken. Esc bricht ab.
+KEY_IN_USE,This key is already assigned.,Diese Taste ist bereits belegt.
+KEY_RESERVED,Choose a key without modifiers. Esc is reserved.,Taste ohne Zusatztasten wählen. Esc ist reserviert.
+SETTINGS_SAVE_FAILED,Settings could not be saved.,Einstellungen konnten nicht gespeichert werden.
+SETTINGS_LOAD_FAILED,Settings could not be loaded. Defaults are active.,Einstellungen konnten nicht geladen werden. Standardwerte sind aktiv.
+EXIT_FOREST_PATH,Forest path ({key}),Waldpfad ({key})
+EXIT_FOREST_CLEARING,Clearing ({key}),Lichtung ({key})
+SEGMENT_LOAD_FAILED,The next area could not be loaded.,Der nächste Bereich konnte nicht geladen werden.
+SEGMENT_ENTRY_INVALID,The entry point for the next area is missing.,Der Eintrittspunkt des nächsten Bereichs fehlt.
+KEY_SPACE,Space,Leertaste
+KEY_UP,Up,Pfeil hoch
+KEY_DOWN,Down,Pfeil runter
+KEY_LEFT,Left,Pfeil links
+KEY_RIGHT,Right,Pfeil rechts
+KEY_ENTER,Enter,Eingabe
+KEY_TAB,Tab,Tab
+KEY_BACKSPACE,Backspace,Rücktaste
+KEY_DELETE,Delete,Entf
+KEY_HOME,Home,Pos1
+KEY_END,End,Ende
+KEY_PAGEUP,Page Up,Bild hoch
+KEY_PAGEDOWN,Page Down,Bild runter
+KEY_INSERT,Insert,Einfg
