@@ -1,12 +1,16 @@
-# Monster-System – Phase 1: Foundation
+# Monster-System – Foundation und erster Begleiter
 
 ## Status und Abgrenzung
 
-**Implementiert:** Monsterarten als editierbare Resources, sieben Evolutionsstufen als Enum, sechs begrenzte Stats, unabhängige individuelle Monsterdaten, Current HP/MP, Laden per technischer ID, drei Testdefinitionen und wiederholbare Headless-Tests.
+„Phase 1“ (Foundation) und „Phase 2“ (erster Begleiter) bezeichnen die technischen Monster-Arbeitspakete. Beide gehören zum ersten Schritt „Spielbarer Prototyp: Waldlichtung“ der [Projekt-Roadmap](ROADMAP.md); daraus folgt keine Abnahme der späteren Roadmap-Stufen.
 
-**Nur geplant:** Begleiter-KI, wilde Monster, Gegner-/Bossverhalten, Training als Spielmechanik, Pflege, Evolution, Zeitverwaltung, Schlaf, Lebensalter, Tod, Animationssteuerung und Savegames. Für diese Bereiche gibt es keine leeren Klassen, vorläufigen Simulationsfelder oder Manager. Die Monster werden in Phase 1 noch nicht in die Waldszenen eingesetzt.
+**Implementiert, Phase 1:** Monsterarten als editierbare Resources, sieben Evolutionsstufen als Enum, sechs begrenzte Stats, unabhängige individuelle Monsterdaten, Current HP/MP, Laden per technischer ID, drei Testdefinitionen und wiederholbare Headless-Tests.
 
-Die neuen verbindlichen Zukunftsentscheidungen dieses Dokuments konkretisieren die zuvor als OFFEN markierten Monsterregeln in Game Design und Roadmap. Noch fehlende Zahlen und Ereignisdefinitionen bleiben ausdrücklich offen.
+**Implementiert, Phase 2:** Ein zentral verwalteter Begleiter, einfache kollisionsgebundene Folgebewegung entlang der Spielerroute, Neuerzeugung der Weltinstanz bei Segmentwechseln mit Erhalt derselben Monsterdaten und ein visueller Adapter für `idle`/`walk`. Die vorhandenen Platzhalter besitzen keine Animationsclips; fehlende Clips sind ausdrücklich zulässig.
+
+**Nur geplant:** Wilde Monster, Gegner-/Bossverhalten, Training als Spielmechanik, Pflege, Evolution, Zeitverwaltung, Schlaf, Lebensalter, Tod, weitere Animationen und Savegames. Dafür gibt es weiterhin keine leeren Simulationsklassen oder vorläufigen Datenfelder.
+
+Die verbindlichen Zukunftsentscheidungen dieses Dokuments ergänzen Game Design und Roadmap, ohne die betreffenden Systeme bereits zu implementieren. Noch fehlende Zahlen und Ereignisdefinitionen bleiben ausdrücklich offen.
 
 ## Implementierte Datenklassen
 
@@ -21,10 +25,12 @@ Die neuen verbindlichen Zukunftsentscheidungen dieses Dokuments konkretisieren d
 | `evolution_stage: EvolutionStage` | Typisierte Evolutionsstufe. |
 | `base_stats: MonsterStats` | Grundwerte der Art, als eingebettete Stat-Resource. |
 | `visual_scene: PackedScene` | Referenz auf eine unabhängig austauschbare visuelle Szene. |
+| `idle_animation: StringName` | Artspezifischer Clipname für den logischen Zustand `idle`; Standard `idle`. |
+| `walk_animation: StringName` | Artspezifischer Clipname für den logischen Zustand `walk`; Standard `walk`. |
 
 Das zentrale Enum `MonsterDefinition.EvolutionStage` besitzt explizite Werte: `BABY=0`, `TRAINING=1`, `KID=2`, `TEEN=3`, `ADULT=4`, `ASCENDED=5`, `MASTER=6`. Vor späteren Savegames dürfen diese Werte nicht beiläufig umnummeriert werden. Es existiert noch keine Evolutionsprüfung.
 
-Definitionen werden bewusst gemeinsam geladen. Sie sind zur Laufzeit **Konfiguration, keine Trainingsdaten**. Godot-Resources sind technisch veränderbar; diese Konvention ist keine allgemeine Schreibsperre. Insbesondere darf Spielcode nicht über `instance.definition.base_stats` trainieren. Erweiterungen um Animationszuordnungen, Schlafrhythmen und Evolutionsregeln gehören später in die Artkonfiguration, sobald ihre konkrete Verantwortung feststeht.
+Definitionen werden bewusst gemeinsam geladen. Sie sind zur Laufzeit **Konfiguration, keine Trainingsdaten**. Godot-Resources sind technisch veränderbar; diese Konvention ist keine allgemeine Schreibsperre. Insbesondere darf Spielcode nicht über `instance.definition.base_stats` trainieren. Die beiden grundlegenden Animationszuordnungen existieren seit Phase 2. Weitere Zuordnungen, Schlafrhythmen und Evolutionsregeln gehören später in die Artkonfiguration, sobald ihre konkrete Verantwortung feststeht.
 
 ### MonsterStats: wiederverwendbare Wertestruktur
 
@@ -122,18 +128,56 @@ Es gibt keinen numerischen Sleepiness-Wert. Jede Art soll einen zeitbasierten Sc
 
 Begleiter, wilde Monster, Gegner und Bosse verwenden dieselben Definitionen. Rollen entstehen durch austauschbare Verhaltenskomponenten; keine Vererbungsbäume pro Monsterart. Die individuelle Dateninstanz bleibt unabhängig von CharacterBody, Modellknoten, Skelett und konkreten Animationen.
 
-Eine spätere Darstellungskomponente soll eine einheitliche logische Animationsschnittstelle verwenden, deren Zustände auf artspezifische Animationen abgebildet werden. Unterschiedliche Skelette und Clips bleiben möglich. Diese Schnittstelle und ihr Zustandssatz sind noch nicht implementiert oder endgültig festgelegt.
+`MonsterVisual` setzt seit Phase 2 die grundlegenden logischen Zustände `idle` und `walk` um. Weitere Zustände sind noch nicht festgelegt. Die Komponente kennt keine konkreten Skelette oder Monsterarten.
 
-## Persistenzvorbereitung und Phase 2
+## Phase 2: aktiver Begleiter und Weltinstanz
+
+`CompanionManager` (`scripts/monsters/companion_manager.gd`) ist ein schlanker zusätzlicher Autoload. Er hält genau eine `active_monster: MonsterInstance` im Arbeitsspeicher und eine Referenz auf den aktuellen `CompanionFollower`. Der Standard ist die vorhandene Definition `drako`, konfiguriert durch `default_monster_id`. Erst eine Szene mit lokalem `Player` in der Gruppe `player` benötigt und erzeugt den Begleiter.
+
+Die Szenen und der SceneManager enthalten keine Begleiter-Sonderlogik. Der Manager hört auf `SceneTree.scene_changed`, wartet auf Physikregistrierung und Spielerplatzierung und hängt die wiederverwendbare Szene `scenes/monsters/companion.tscn` an das aktuelle Segment. Die vorige Szene entfernt ihren Körper beim Entladen. Erneutes Anfordern in derselben Szene erzeugt keinen zweiten Körper. Während der bestehenden Übergangsblende pausiert der Controller seine Bewegung.
+
+Die Weltinstanz enthält nur Körper, Collider, Verhaltenskomponente und visuelle Komponente. Sie referenziert dieselbe zentrale MonsterInstance. Individuelle Stats, Current HP/MP und Instanz-ID werden beim Szenenwechsel nicht kopiert oder neu erzeugt. Das ist Erhalt innerhalb der laufenden Spielsitzung, **kein Savegame-System**.
+
+### Folgebewegung und sichere Positionierung
+
+`CompanionFollower` (`scripts/monsters/companion_follower.gd`) verwendet `CharacterBody3D`, Schwerkraft und `move_and_slide()`. Die konfigurierbaren Ausgangswerte sind 1,5 Einheiten Folgeabstand, 0,08 Wiederanlaufreserve, 4,5 Einheiten/Sekunde normales Lauftempo und ein Annäherungsfaktor von 4 pro Sekunde. `acceleration = 9.0` Einheiten/Sekunde² ergibt etwa 0,5 Sekunden vom Stillstand bis zum normalen Lauftempo. `deceleration = 14.0` steuert das Abbremsen separat. `catch_up_speed = 6.0` begrenzt die Aufholgeschwindigkeit: Ab `catch_up_distance = 1.0` Einheiten Rückstand zum **verzögerten** Ziel wird das Geschwindigkeitslimit linear erhöht; beim doppelten Rückstand ist das Maximum erreicht. Ein niedrigerer Aufholwert reduziert nicht das normale Lauftempo. Diese technischen Bewegungsparameter sind unabhängig vom trainierbaren SPEED-Stat; eine spätere Zuordnung wäre eine eigene Spielregel.
+
+Der Controller zeichnet pro Physikschritt Spielerpositionen mit lokaler Simulationszeit auf. `follow_delay = 1.0` Sekunden ist im Inspector konfigurierbar (0 bis 3 Sekunden). Interpolation liefert Position und Bewegungsrichtung zum Zeitpunkt `jetzt - follow_delay`; jüngere Daten werden niemals als Bewegungsziel oder Abkürzung verwendet. Menüpausen und Übergangsblenden lassen diese Uhr ruhen. Beim Erzeugen wird die bekannte Eintrittsposition als Vorgeschichte eingetragen: Ein entfernter Begleiter kann sofort zum Eintrittspunkt laufen, ohne zusätzliche Startsperre. Laufende Änderungen des Delay-Werts benötigen bei einer Erhöhung zunächst neue Historie; für reproduzierbare Konfiguration vor `configure()` setzen.
+
+Nur freigegebene ältere Positionen werden im Abstand von 0,18 Einheiten in die Hindernisspur übernommen. Eine Capsule-Sweep-Prüfung mit Körperbreite erlaubt freie Verbindungen zum verzögerten Ziel oder zu älteren erreichbaren Wegpunkten. Sie kann veraltete Umwege überspringen, aber keine zukünftige Richtungsänderung vorwegnehmen. Die Suche ist begrenzt; die Hindernisspur bleibt auf 512 Punkte beschränkt. Die Zeitspur entfernt fortlaufend nicht mehr benötigte Einträge.
+
+Bei freier Verbindung berücksichtigt die gewünschte Geschwindigkeit ausschließlich die zeitversetzte Bewegung. Der Laufabstand entsteht aus Tempo und Verzögerung; der bisherige Folgeabstand wird beim Anhalten zum persönlichen Ruheabstand eingeblendet, statt zusätzlich zur Sekunde Laufverzögerung aufaddiert zu werden. Eine kurze Vorausprüfung verhindert seitliches Einlenken in einen Felsen. Beschleunigungsgrenze, proportionale Annäherung, Bremsweg und Schrittweitenbegrenzung beruhigen die Bewegung. Kleine Ruhetoleranz und getrennte Walk-/Idle-Schwellen vermeiden numerisches Zittern. Die Blickrichtung verwendet exponentielle, von `delta` abhängige Glättung. Kollisionen oder Aufholen nach Hindernissen können den tatsächlichen Abstand vorübergehend vergrößern; die Sekunde ist kein erzwungener Teleport-Zeitplan.
+
+Es gibt weiterhin genau eine horizontale Geschwindigkeitsintegration mit `move_toward(..., rate * delta)`. Sinkendes Solltempo und Richtungsumkehr verwenden die Bremsstärke, sonst gilt die Beschleunigung. Die Annäherung berechnet die zulässige Geschwindigkeit aus derselben Bremsstärke inklusive einer Physikschritt-Reserve. Richtungswechsel glätten sich innerhalb dieser bestehenden Integration; es gibt keine zweite Bewegungssteuerung oder zusätzliche Pause an jedem Spurpunkt. Die langsamere Anlauframpe darf den tatsächlichen Zeitabstand kurz etwas über die konfigurierte Sekunde erhöhen.
+
+Die Sweep-Prüfung hebt den Collider um 0,05 Einheiten an, damit Bodenkontakt auf den vorhandenen flachen Segmenten keine freien Strecken fälschlich blockiert. Sie ersetzt keine allgemeine Prüfung von Abgründen oder komplexen Höhenverläufen. Gegenüber einem dünnen Sichtstrahl berücksichtigt sie den benötigten Abstand zu Felskanten und Wänden. Kein Navmesh, A*, Teleport-Nachholen oder neues Navigationssystem wurde eingeführt.
+
+Der Manager sucht beim Eintritt in ein Segment acht nahe Kandidatenpositionen. Bodenprüfung, Capsule-Überlappungstest und Sichtprüfung zum Spieler vermeiden Spawns im Felsen, auf dessen Dach oder jenseits der Randkollisionen. Die Füßhöhe wird anhand der aktuellen Spieler-Konvention (Root 0,9 Einheiten über Boden) bestimmt. Der gemeinsame Collider hat Radius 0,3 und Höhe 1,2; künftige deutlich andere Körpergrößen benötigen bewusst abgestimmte Collider.
+
+Der Begleiter verwendet Kollisionslayer 2 und prüft die bestehende Welt auf Layer 1. Der unveränderte Spieler prüft Layer 1 und wird somit nicht vom Begleiter blockiert. Die Area3D-Ausgänge prüfen Layer 1 und akzeptieren zusätzlich nur die Gruppe `player`. Der Begleiter gehört ausschließlich zur Gruppe `companion` und kann deshalb selbst keinen Segmentwechsel auslösen.
+
+### Modelle und Animationen
+
+`MonsterVisual` (`scripts/monsters/monster_visual.gd`) instanziiert ausschließlich `definition.visual_scene`, erwartet eine Node3D-Wurzel und verwendet gegebenenfalls den ersten enthaltenen `AnimationPlayer`. `idle_animation` und `walk_animation` der Definition bilden logische Zustände auf beliebige Clipnamen ab. Ein fehlender Walk-Clip fällt auf vorhandenes Idle zurück; fehlen auch Idle beziehungsweise AnimationPlayer, bleibt das Modell ohne Fehler statisch. Vorhandene Assets konfigurieren Schleifen selbst; gemeinsam genutzte Animation-Resources werden nicht verändert.
+
+`set_walking()` wird aus der tatsächlich erzielten horizontalen Körperbewegung angesteuert, damit ein durch Kollision gestoppter Begleiter nicht weiter als laufend behandelt wird. Mehrere AnimationPlayer, AnimationTree-Steuerungen und fortgeschrittene Zustände sind noch nicht Gegenstand dieser Schnittstelle.
+
+### Andere Art oder vorhandene Instanz einsetzen
+
+```gdscript
+var companions := get_node("/root/CompanionManager")
+companions.select_species(&"slimo")
+```
+
+Dies lädt eine andere Definition und erzeugt bewusst eine neue MonsterInstance. Erneute Auswahl derselben Art erhält dagegen die aktuelle Instanz. Die Weltinstanz wird bei Bedarf asynchron nach der nächsten Physikregistrierung erzeugt; unmittelbar nach dem Aufruf kann `get_actor()` noch `null` liefern.
+
+Bereits vorhandene individuelle Monster können mit `companions.set_active_monster(existing_instance)` eingesetzt werden. Für einen anderen Standard beim Spielstart `default_monster_id` ändern. Weder Controller noch visuelle Komponente enthalten artspezifische Fallunterscheidungen. Ungültige IDs liefern `false` und eine technische `last_error`-Diagnose; der aktive Begleiter bleibt erhalten. Die API ist keine Evolution und kein neues Auswahlmenü.
+
+## Persistenzvorbereitung und weitere Schritte
 
 Ein späterer Datensatz soll mindestens Savegame-Schemaversion, technische Art-ID, Instanz-ID, individuelle Stats und Current HP/MP enthalten. Base Stats und vollständige 3D-Szenen werden darin nicht dupliziert. Das Wiederherstellen trainierter Stats muss ausdrücklich vom Erzeugen eines neuen Monsters unterschieden werden. Es gibt noch keinen Serializer, keine Migration und keine vollständige Speicherfunktion.
 
-Für Phase 2 sind vor der Begleiterintegration insbesondere festzulegen:
-
-- Wer die aktive `MonsterInstance` über die frisch geladenen Waldsegmente hinweg besitzt. Der SceneManager soll weiterhin nur Szenen wechseln; die Monsteridentität darf beim Wechsel nicht neu entstehen.
-- Welche Darstellung-/Bewegungskomponente die Definition instanziiert und dieselben individuellen Daten referenziert.
-- Folgeabstand, Kollisionen, Hindernisfälle und benötigte logische Animationen.
-- Prüfbare Abnahme für den ersten Begleiter. Pflege, Evolution und Zeit bleiben eigenständige spätere Schritte.
+Für weitere Schritte offen bleiben echte Animationsassets, weitere logische Zustände, artspezifische Körpergrößen sowie die Behandlung wesentlich komplexerer oder dynamischer Hindernisse. Die einfache Wegpunktspur ist kein allgemeiner Wegfinder und behandelt manuelle Teleports innerhalb desselben Segments nicht automatisch. Pflege, Evolution und Zeit bleiben eigenständige spätere Schritte.
 
 ## Wiederholbare Tests
 
@@ -144,12 +188,23 @@ Im Projektverzeichnis mit der lokal installierten Godot-4.7.2-Binary ausführen:
 & 'D:\godotinstall\Godot_v4.7.2-stable_win64.exe' --headless --path . --editor --import --quit
 & 'D:\godotinstall\Godot_v4.7.2-stable_win64.exe' --headless --path . --script tests/test_monsters.gd --log-file .godot/monster_tests.log
 & 'D:\godotinstall\Godot_v4.7.2-stable_win64.exe' --headless --path . --fixed-fps 60 --script tests/test_world_smoke.gd --log-file .godot/world_smoke.log
+& 'D:\godotinstall\Godot_v4.7.2-stable_win64.exe' --headless --path . --fixed-fps 60 --script tests/test_companion.gd --log-file .godot/companion_tests.log
+& 'D:\godotinstall\Godot_v4.7.2-stable_win64.exe' --headless --path . --fixed-fps 60 --script tests/test_companion_motion.gd --log-file .godot/companion_motion.log
+& 'D:\godotinstall\Godot_v4.7.2-stable_win64.exe' --headless --path . --fixed-fps 60 --script tests/test_companion_delay.gd --log-file .godot/companion_delay.log
 ```
 
-Andere Installationen verwenden denselben Aufruf mit ihrem Godot-Pfad. Beide Testtreiber beenden sich bei fachlichen Fehlern mit Exitcode 1. Sie verwenden kein zusätzliches Testframework. Temporäre Testresources werden ausschließlich unter `.godot/` angelegt und wieder entfernt; Sprache und Inputzustände werden nur für den laufenden Prozess geändert.
+Andere Installationen verwenden denselben Aufruf mit ihrem Godot-Pfad. Alle Testtreiber beenden sich bei fachlichen Fehlern mit Exitcode 1. Sie verwenden kein zusätzliches Testframework. Temporäre Testresources werden ausschließlich unter `.godot/` angelegt und wieder entfernt; Sprache und Inputzustände werden nur für den laufenden Prozess geändert.
 
 `test_monsters.gd` prüft Lookup, ungültige IDs und Typen, Enum, Identitäten, Initialisierung, isolierte Änderungen, kopierende Stat-Zuweisung, getrennte Vitalwerte, technische Grenzen und extrem große Deltas. Eine während des Tests neu gespeicherte Art wird ohne Codeänderung geladen; eine zweite Datei mit derselben Ressourcen-ID wird abgewiesen. Übersetzung und einfache visuelle Szenen werden ebenfalls geprüft.
 
 `test_world_smoke.gd` prüft die vorhandene Waldlichtung, Bodenhaftung, feste Kamera, Bewegung, Menüpause und die echten Area3D-Wechsel A→B→A einschließlich Eintrittspunkten. Headless prüft Physik und Abläufe, nicht die Pixelqualität der 2.5D-Shader.
 
-Ergebnis bei Implementierung: Monster-Tests **78 Prüfungen, 0 Fehler**; Welt-Regression **0 Fehler**. Erste Sandbox-Läufe bestanden fachlich, hatten jedoch Zugriffsfehler des bestehenden MCP-Plugins und des Windows-Zertifikatsspeichers. Die freigegebenen Wiederholungen außerhalb der Sandbox lieferten saubere Testprotokolle. Bestehende Szenen, Spielerskript, SceneManager, Einstellungen und Autoload-Konfiguration wurden nicht verändert.
+`test_companion.gd` prüft Folgen, Stillstand, Vergleich bei 30/60/120 Physikschritten pro Sekunde, eine Route um den vorhandenen Testblock, sicheren Boden, Drako und Slimo, Animation-Mappings mit synthetischen Clips, fehlende Clips, fehlenden AnimationPlayer, doppelte Erzeugungsanforderungen und Begleiterwechsel. A→B→A bewahrt dieselbe MonsterInstance einschließlich individuell geänderter Stats und Vitalwerte. Menüpause und das Ignorieren des Begleiters durch Ausgänge sind ebenfalls geprüft. Der Walk-Zustand wird während der Spielerbewegung geprüft; er muss nach dem schnelleren Abbremsen nicht künstlich weiterbestehen.
+
+`test_companion_motion.gd` umfasst 52 Prüfungen für Anlauframpe, begrenztes Aufholen, Beschleunigungs-/Bremsgrenzen, fehlendes Überschwingen und Gegenkorrekturen, verzögerten Start, Stillstand, Kurven und die Testblockroute bei 30/60/120 Physikschritten. Die bestehenden Hindernisgrenzen wurden beibehalten. Gemessen: Start nach 1,03–1,05 Sekunden, maximal 6 Einheiten/Sekunde beim Aufholen, kein Überschwingen am ruhenden Ziel, kein Rückwärtslaufen auf gerader Strecke, keine Positionsdrift in Ruhe, Hindernisroute ohne Stillstandsphasen und Stillstand etwa 1,17–1,18 Sekunden nach Ende der Spielerroute.
+
+`test_companion_delay.gd` ergänzt 24 Prüfungen: gemessene Wegmarken-Verzögerung für 0,5/1,0/1,5 Sekunden, zeitversetztes Abbiegen, lange Ruhephase und sofortige Annäherung eines entfernten Spawns bei 30/60/120 Physikschritten. Für `follow_delay = 1.0` wurde die Wegmarke mit der sanften Anlauframpe etwa 1,07–1,12 Sekunden später passiert; die erkennbare Nordbewegung nach einem 90°-Knick begann nach 1,20–1,23 Sekunden. Aktueller Stand: Delay **24/0**, Bewegung **52/0**, Begleiter **47/0**, Foundation **78/0**, Welt-Regression **0 Fehler**. Diese Messungen beziehen sich auf die definierten Szenarien, nicht jede Hinderniskonstellation.
+
+Die letzten Bewegungsanpassungen betreffen Controller, Tests und Bewegungsdokumentation. Monsterdatenmodell, CompanionManager, Spieler, Kamera, Waldszenen und Szenenwechsel wurden dabei nicht verändert. Die vorliegenden Testprotokolle ergeben insgesamt **201 Einzelprüfungen ohne Fehler** zuzüglich der erfolgreichen Welt-Regression.
+
+Die weichere Variante wurde zusätzlich über Godot MCP im regulären gerenderten Spiel geprüft: Ein entfernter Begleiter beschleunigte innerhalb von 0,28 Sekunden auf etwa 2,55 Einheiten/Sekunde. Die anschließende Route rechts um den Testblock mit zwei Richtungswechseln führte hinter das Hindernis und danach zum ruhigen Stillstand. Die vollständige Prüfung aller drei Physikraten erfolgt reproduzierbar durch die Headless-Tests. Für diese Spielprüfung waren keine temporären Diagnosemethoden nötig.

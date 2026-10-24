@@ -21,13 +21,11 @@ MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
 SceneManager="*uid://dhr7bawgkj4vo"
 GameSettings="*uid://1jw0uyy6oulq"
 SettingsMenu="*uid://daveuihubeiyo"
+CompanionManager="*uid://b3m4d4iv60xxx"
 
 [display]
 
-window/size/viewport_width=1152
-window/size/viewport_height=648
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [editor_plugins]
 

@@ -1,4 +1,3 @@
-
 ---
 name: requirements-review
 description: Critically review ambiguous requirements, challenge assumptions, and clarify consequential design decisions before implementing changes in FantasyMon.

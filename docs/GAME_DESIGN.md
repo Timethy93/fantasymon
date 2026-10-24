@@ -29,27 +29,29 @@ Jeder Schauplatz kombiniert einen vorgerenderten Hintergrund mit passend ausgeri
 
 Der erste spielbare Schauplatz ist eine kleine Waldlichtung.
 
-**OFFEN:** Weltumfang, Verbindung zwischen Schauplätzen, Anzahl der Perspektiven je Schauplatz, Kameraprojektion, Verdeckung hinter Vordergrundelementen, Licht- und Schattenstil sowie Zielauflösung.
+Der technische Prototyp verbindet zwei frisch geladene Waldsegmente über definierte Ausgänge und Eintrittspunkte. Die Lichtung verwendet einen vorgerenderten PNG-Hintergrund, eine feste perspektivische Kamera und ein 3D-Verdeckungsmesh; der Waldpfad bleibt eine 3D-Testszene. Die Ausgabe bleibt bei 16:9 mit Balken in anderen Fensterformaten. Details stehen in [ARCHITECTURE.md](ARCHITECTURE.md) und [PRERENDERED_FOREST_POC.md](PRERENDERED_FOREST_POC.md).
+
+**OFFEN:** Weltumfang und Verbindungen weiterer Schauplätze, finale Kameraperspektiven, zusätzliche Vordergrundverdeckung sowie endgültiger Licht- und Schattenstil.
 
 ## Spieler und Monsterpartner
 
-Die technische Monster-Foundation (Phase 1) ist in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md) beschrieben. Sie implementiert Artdefinitionen, individuelle Stats, Current HP/MP und ID-basiertes Laden, noch keinen sichtbaren Begleiter. Dasselbe Dokument enthält die inzwischen beschlossenen zukünftigen Regeln; diese konkretisieren die folgenden früheren OFFEN-Markierungen für Monsterwerte, sieben Evolutionsstufen, Pflege, Schlaf und Tod, ohne die Simulation bereits umzusetzen.
+Die Monster-Foundation und der erste Begleiter sind in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md) beschrieben. Die dortigen Phasen 1/2 sind technische Monster-Arbeitspakete innerhalb des ersten Roadmap-Schritts. Implementiert sind Artdefinitionen, individuelle Stats, Current HP/MP, ID-basiertes Laden und genau ein aktiver Platzhalterbegleiter, der zeitversetzt folgt und seine individuellen Daten über Segmentwechsel erhält. Die Darstellung unterstützt logische `idle`-/`walk`-Zustände; die vorhandenen Platzhalter besitzen noch keine Clips. Das Monsterdokument ist außerdem die maßgebliche Quelle für bereits beschlossene zukünftige Monsterregeln und ihre noch offenen Details.
 
 Der Spieler bewegt sich durch die Welt und wird von einem Monsterpartner begleitet. Der Partner ist der Mittelpunkt der Aufzucht und des Kampfsystems.
 
-**OFFEN:** Eingabegeräte, Steuerungsdetails, Bewegungsgeschwindigkeit, Interaktionsreichweite, Verhalten bei Hindernissen und die Möglichkeit, den Partner zu wechseln.
+Implementiert sind kamerarelative, frei belegbare Bewegungstasten und einfache kollisionsgebundene Begleiterbewegung. Artwechsel sind über eine technische API möglich, noch nicht über ein Spielmenü. **OFFEN:** Weitere Eingabegeräte, finale Bewegungsabstimmung, Interaktionsreichweite, komplexere Hindernisfälle und die spielerische Auswahl des Partners.
 
 ## Bedürfnisse und Training
 
 Die Versorgung und das Training des Partners bilden die Grundlage der Aufzucht. Bedürfnisse sollen den Spieler zu Fürsorgehandlungen veranlassen; Training beeinflusst die Entwicklung des Monsters.
 
-**OFFEN:** Welche Bedürfnisse existieren, ihre Wertebereiche und Änderungsraten, Zeitmodell, Trainingsarten, Kosten, Auswirkungen und Folgen vernachlässigter Versorgung. Hunger, Müdigkeit oder konkrete Kampfwerte sind damit noch nicht festgelegt.
+Bedürfnisse und die sechs trainierbaren Attribute sind im Monsterdokument festgelegt. Die Pflege- und Trainingssimulation ist noch nicht implementiert. **OFFEN:** Wertebereiche und Änderungsraten der Bedürfnisse, konkretes Zeitmodell, Trainingsarten, Kosten, Auswirkungen und Folgen vernachlässigter Versorgung.
 
 ## Verzweigte Evolution
 
 Der Partner kann abhängig von seiner Aufzucht unterschiedliche Evolutionsformen erreichen. Die Auswahl der Form soll auf nachvollziehbaren Aufzuchtergebnissen beruhen.
 
-**OFFEN:** Evolutionsstufen, Monsteranzahl, Voraussetzungen, Zeitpunkt der Prüfung, Priorität bei mehreren erfüllten Bedingungen und Sichtbarkeit der Kriterien. Lebensspanne, Tod und Wiedergeburt sind nicht entschieden.
+Sieben Evolutionsstufen, verzweigte Bedingungen und grundlegende Stat- und Todesregeln sind im Monsterdokument festgelegt; die Evolution selbst ist noch nicht implementiert. **OFFEN:** Monsteranzahl, konkrete Voraussetzungen und Boni, Prüfzeitpunkte, Priorität bei mehreren erfüllten Bedingungen, Sichtbarkeit der Kriterien, Lebensspanne und Wiedergeburt.
 
 ## Halbautomatischer Kampf
 

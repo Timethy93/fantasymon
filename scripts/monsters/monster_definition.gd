@@ -17,6 +17,8 @@ enum EvolutionStage {
 @export var evolution_stage: EvolutionStage = EvolutionStage.BABY
 @export var base_stats: MonsterStats
 @export var visual_scene: PackedScene
+@export var idle_animation: StringName = &"idle"
+@export var walk_animation: StringName = &"walk"
 
 
 static func is_valid_id(id: StringName) -> bool:

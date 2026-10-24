@@ -8,7 +8,7 @@ Festgelegt sind Godot 4.7.2, GDScript, vorgerenderte 2D-Hintergründe mit animie
 
 ## 1. Spielbarer Prototyp: Waldlichtung
 
-**Technischer Zwischenstand:** Monster-Foundation Phase 1 ist als separates Datenmodell mit Tests umgesetzt; siehe [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md). Sichtbarer Begleiter, Folgebewegung und Animationssteuerung sind weiterhin offen. Dieser Zwischenstand schließt die gesamte folgende Prototyp-Abnahme noch nicht ab.
+**Technischer Zwischenstand:** Die Monster-Foundation und genau ein aktiver Platzhalterbegleiter sind umgesetzt; siehe [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md). Zeitversetztes Following mit sanftem Anlaufen und Bremsen, begrenztes Aufholen, Hindernisumgehung und Datenerhalt bei Segmentwechseln sind getestet. Eine optionale `idle`-/`walk`-Animationsschnittstelle ist vorhanden; echte Animationsassets sowie das abschließende Bewegungs-/Grafikgefühl bleiben offen. Die Bezeichnungen „Phase 1/2“ im Monsterdokument benennen technische Arbeitspakete innerhalb dieses Roadmap-Schritts, keine abgeschlossenen Roadmap-Stufen. Die gesamte folgende Prototyp-Abnahme ist noch nicht abgeschlossen.
 
 **Ziel:** Das Zusammenspiel aus Hintergrund, Kamera, Bewegung, Kollision und Monsterbegleiter praktisch prüfen.
 
@@ -21,7 +21,7 @@ Festgelegt sind Godot 4.7.2, GDScript, vorgerenderte 2D-Hintergründe mit animie
 
 **Abnahme:** Die Szene ist startbar. Spieler und Partner passen sichtbar zur Perspektive des Hintergrunds. Der Spieler kann sich bewegen und wird an Grenzen und Hindernissen gestoppt. Der Partner folgt bei normaler Erkundung nachvollziehbar; Hindernisfälle sind geprüft und erkennbare Blockaden behoben. Kamera und Hintergrund bleiben fest.
 
-**Vor oder während dieses Schritts zu entscheiden – OFFEN:** Kameraprojektion, Hintergrundtechnik, Eingaben, Geschwindigkeiten, Folgeabstand und erforderliche Hindernisbehandlung des Partners.
+**Für den technischen Prototyp festgelegt:** Feste perspektivische Kamera, vorgerenderter PNG-Hintergrund auf der Lichtung, kamerarelative und frei belegbare WASD-Steuerung sowie konfigurierbare Begleiterbewegung entlang einer zeitversetzten Spur mit Kollisionsprüfungen. Die konkreten Parameter und Grenzen stehen im Monsterdokument. **OFFEN:** Finale Bewegungsabstimmung, echte Animationen und Verhalten bei komplexeren oder dynamischen Hindernissen.
 
 Aufzucht, Evolution, Kampf, Stadtaufbau und Speichern sind für diese Abnahme nicht erforderlich. Vorläufige eigene Assets genügen.
 
