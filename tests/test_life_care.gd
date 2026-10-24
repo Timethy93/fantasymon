@@ -244,6 +244,7 @@ func menu_tests() -> void:
 	await hud_tests()
 
 func hud_tests() -> void:
+	await hud_vital_display_tests()
 	var hud := root.get_node("GameHud")
 	var monster: MonsterInstance = root.get_node("CompanionManager").active_monster
 	monster.current_hp = 7
@@ -277,6 +278,71 @@ func hud_tests() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	settings._apply_all()
 	await integration_tests()
+
+func hud_vital_display_tests() -> void:
+	var manager := root.get_node("CompanionManager")
+	var original: MonsterInstance = manager.active_monster
+	var replacement := MonsterInstance.create(MonsterRegistry.new().get_monster(&"slimo"))
+	var hud: Control = root.get_node("GameHud").monster_hud
+	var settings := root.get_node("GameSettings")
+	var saved_visibility: Dictionary = settings.hud_visible.duplicate()
+	var saved_locale := TranslationServer.get_locale()
+	var saved_size := root.content_scale_size
+	for field in [&"hp", &"mp", &"satiety"]:
+		settings.hud_visible[field] = true
+	settings.changed.emit()
+	check(manager.set_active_monster(replacement), "HUD test switches active monster")
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		for field in [&"hp", &"mp"]:
+			replacement.set("current_" + String(field), 0)
+			check(hud.fields[field].bar.value == 0 and hud.fields[field].label.text == TranslationServer.translate("STAT_" + String(field).to_upper()), "Empty vital bar has translated label without numbers: " + locale + " " + String(field))
+			replacement.set("current_" + String(field), replacement.stats.get(field))
+			check(hud.fields[field].bar.value == replacement.stats.get(field) and hud.fields[field].bar.max_value == replacement.stats.get(field) and not hud.fields[field].bar.show_percentage, "Full vital bar retains maximum and hides numeric overlay: " + String(field))
+		for satiety in [0.0, 42.5, 100.0]:
+			replacement.debug_set_satiety(satiety)
+			check(hud.fields[&"satiety"].label.text == TranslationServer.translate("SATIETY") and hud.fields[&"satiety"].bar.value == satiety and hud.fields[&"satiety"].bar.max_value == 100 and not hud.fields[&"satiety"].bar.show_percentage, "Satiety keeps bar values with translated label only: " + locale + " " + str(satiety))
+	replacement.stats.mp = 0
+	check(hud.fields[&"mp"].bar.value == 0 and hud.fields[&"mp"].bar.max_value == 1 and hud.fields[&"mp"].label.text == TranslationServer.translate("STAT_MP"), "Zero maximum MP remains an empty valid bar")
+	for field in [&"hp", &"mp"]:
+		settings.hud_visible[field] = false
+		settings.changed.emit()
+		check(not hud.fields[field].row.visible, "Vital visibility setting hides row: " + String(field))
+		settings.hud_visible[field] = true
+		settings.changed.emit()
+		check(hud.fields[field].row.visible, "Vital visibility setting restores row: " + String(field))
+	manager.set_active_monster(original)
+	var displayed_hp: float = hud.fields[&"hp"].bar.value
+	replacement.current_hp = 0
+	check(hud.fields[&"hp"].bar.value == displayed_hp and hud.fields[&"mp"].bar.max_value == maxf(1, original.stats.mp), "Monster switch restores original values and disconnects previous monster")
+	root.content_scale_size = Vector2i(640, 360)
+	for frame in 4:
+		await process_frame
+	var canvas := Rect2(Vector2.ZERO, Vector2(640, 360))
+	check(canvas.encloses(hud.get_global_rect()), "Monster HUD fits 640x360 canvas")
+	check(hud.get_theme_stylebox("panel") is StyleBoxEmpty, "Monster HUD has no enclosing panel background")
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		for frame in 4:
+			await process_frame
+		var bar_left := -1.0
+		var previous_bottom := -1.0
+		for field in [&"hp", &"mp", &"satiety"]:
+			var bar: ProgressBar = hud.fields[field].bar
+			var label: Label = hud.fields[field].label
+			var bar_rect := bar.get_global_rect()
+			var label_rect := label.get_global_rect()
+			check(canvas.encloses(hud.get_global_rect()) and hud.get_global_rect().encloses(bar_rect) and hud.get_global_rect().encloses(label_rect), "Bar and label fit HUD at 640x360: " + locale + " " + String(field))
+			check(label_rect.end.x <= bar_rect.position.x and absf(label_rect.get_center().y - bar_rect.get_center().y) <= 1, "Label sits left of vertically centered bar: " + locale + " " + String(field))
+			check(bar_left < 0 or is_equal_approx(bar_left, bar_rect.position.x), "HUD bars align horizontally: " + locale + " " + String(field))
+			check(previous_bottom < 0 or (label_rect.position.y >= previous_bottom and label_rect.position.y - previous_bottom <= 4), "HUD rows are compact without overlap: " + locale + " " + String(field))
+			check(bar.custom_minimum_size == Vector2(210, 10) and not bar.has_theme_stylebox_override("background") and not bar.get_theme_stylebox("background") is StyleBoxEmpty and not bar.has_theme_stylebox_override("fill"), "Bar keeps dimensions and inherited background/fill styles: " + String(field))
+			bar_left = bar_rect.position.x
+			previous_bottom = label_rect.end.y
+	root.content_scale_size = saved_size
+	TranslationServer.set_locale(saved_locale)
+	settings.hud_visible.assign(saved_visibility)
+	settings.changed.emit()
 
 func integration_tests() -> void:
 	var menus := root.get_node("Menus")
