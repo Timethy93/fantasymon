@@ -92,6 +92,22 @@ func debug_set_satiety(value: float) -> void:
 func care_events() -> Array[RefCounted]:
 	return _care_events.duplicate()
 
+# Debug history editing only; never change hunger/refusal simulation flags.
+func debug_add_care_event(cause: StringName, at_seconds: float) -> bool:
+	if cause not in [CareEvent.STARVATION, CareEvent.OVERFEEDING] or not is_finite(at_seconds) or at_seconds < 0:
+		return false
+	_record_care(cause, at_seconds)
+	changed.emit()
+	return true
+
+func debug_remove_care_event(event: RefCounted) -> bool:
+	var index := _care_events.find(event)
+	if index < 0:
+		return false
+	_care_events.remove_at(index)
+	changed.emit()
+	return true
+
 func debug_clear_care_events() -> void:
 	_care_events.clear() # Do not re-arm an ongoing starvation phase.
 	changed.emit()

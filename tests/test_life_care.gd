@@ -61,6 +61,7 @@ func run() -> void:
 	quit(0 if failures == 0 else 1)
 
 func extra_tests() -> void:
+	debug_care_event_tests()
 	var registry := MonsterRegistry.new()
 	var drako := MonsterInstance.create(registry.get_monster(&"drako"))
 	var slimo := MonsterInstance.create(registry.get_monster(&"slimo"))
@@ -243,6 +244,8 @@ func menu_tests() -> void:
 	await hud_tests()
 
 func hud_tests() -> void:
+	await hud_vital_display_tests()
+	await status_display_tests()
 	var hud := root.get_node("GameHud")
 	var monster: MonsterInstance = root.get_node("CompanionManager").active_monster
 	monster.current_hp = 7
@@ -259,7 +262,7 @@ func hud_tests() -> void:
 	var old_locale := TranslationServer.get_locale()
 	TranslationServer.set_locale("de")
 	await process_frame
-	check(hud.monster_hud.fields[&"satiety"].label.text.begins_with("Sättigung") and hud.time_hud.label.text.begins_with("Tag"), "Live HUD translation")
+	check(hud.monster_hud.fields[&"satiety"].icon.tooltip_text.begins_with("Sättigung") and hud.time_hud.label.text.begins_with("Tag"), "Live HUD translation")
 	TranslationServer.set_locale(old_locale)
 	var Settings = load("res://scripts/game_settings.gd")
 	var path := "res://.godot/life_test_settings.cfg"
@@ -277,6 +280,198 @@ func hud_tests() -> void:
 	settings._apply_all()
 	await integration_tests()
 
+func hud_vital_display_tests() -> void:
+	var manager := root.get_node("CompanionManager")
+	var original: MonsterInstance = manager.active_monster
+	var replacement := MonsterInstance.create(MonsterRegistry.new().get_monster(&"slimo"))
+	var hud: Control = root.get_node("GameHud").monster_hud
+	var settings := root.get_node("GameSettings")
+	var saved_visibility: Dictionary = settings.hud_visible.duplicate()
+	var saved_locale := TranslationServer.get_locale()
+	var saved_size := root.content_scale_size
+	for field in [&"hp", &"mp", &"satiety"]:
+		settings.hud_visible[field] = true
+	settings.changed.emit()
+	check(manager.set_active_monster(replacement), "HUD test switches active monster")
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		for field in [&"hp", &"mp"]:
+			replacement.set("current_" + String(field), 0)
+			check(hud.fields[field].bar.value == 0 and hud.fields[field].icon.tooltip_text == TranslationServer.translate("STAT_" + String(field).to_upper()), "Empty vital bar has translated icon tooltip: " + locale + " " + String(field))
+			replacement.set("current_" + String(field), replacement.stats.get(field))
+			check(hud.fields[field].bar.value == replacement.stats.get(field) and hud.fields[field].bar.max_value == replacement.stats.get(field) and not hud.fields[field].bar.show_percentage, "Full vital bar retains maximum and hides numeric overlay: " + String(field))
+		for satiety in [0.0, 42.5, 100.0]:
+			replacement.debug_set_satiety(satiety)
+			check(hud.fields[&"satiety"].icon.tooltip_text == TranslationServer.translate("SATIETY") and hud.fields[&"satiety"].bar.value == satiety and hud.fields[&"satiety"].bar.max_value == 100 and not hud.fields[&"satiety"].bar.show_percentage, "Satiety keeps bar values with translated icon tooltip: " + locale + " " + str(satiety))
+	replacement.stats.mp = 0
+	check(hud.fields[&"mp"].bar.value == 0 and hud.fields[&"mp"].bar.max_value == 1 and hud.fields[&"mp"].icon.tooltip_text == TranslationServer.translate("STAT_MP"), "Zero maximum MP remains an empty valid bar")
+	for field in [&"hp", &"mp"]:
+		settings.hud_visible[field] = false
+		settings.changed.emit()
+		check(not hud.fields[field].row.visible, "Vital visibility setting hides row: " + String(field))
+		settings.hud_visible[field] = true
+		settings.changed.emit()
+		check(hud.fields[field].row.visible, "Vital visibility setting restores row: " + String(field))
+	manager.set_active_monster(original)
+	var displayed_hp: float = hud.fields[&"hp"].bar.value
+	replacement.current_hp = 0
+	check(hud.fields[&"hp"].bar.value == displayed_hp and hud.fields[&"mp"].bar.max_value == maxf(1, original.stats.mp), "Monster switch restores original values and disconnects previous monster")
+	root.content_scale_size = Vector2i(640, 360)
+	for frame in 4:
+		await process_frame
+	var canvas := Rect2(Vector2.ZERO, Vector2(640, 360))
+	check(canvas.encloses(hud.get_global_rect()), "Monster HUD fits 640x360 canvas")
+	check(hud.get_theme_stylebox("panel") is StyleBoxEmpty, "Monster HUD has no enclosing panel background")
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		for frame in 4:
+			await process_frame
+		var bar_left := -1.0
+		var previous_bottom := -1.0
+		for field in [&"hp", &"mp", &"satiety"]:
+			var bar: ProgressBar = hud.fields[field].bar
+			var icon: TextureRect = hud.fields[field].icon
+			check(icon.texture.resource_path == "res://assets/ui/icons/stats/%s.png" % field and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST and icon.size == Vector2(24, 24), "HUD uses matching native-size pixel icon with nearest filtering: " + String(field))
+			var expected_colors := {&"hp": Color("#D84B49"), &"mp": Color("#4389D5"), &"satiety": Color("#E6A13F")}
+			check(bar.get_theme_stylebox("fill").bg_color == expected_colors[field], "HUD uses requested fill color: " + String(field))
+			var bar_rect := bar.get_global_rect()
+			var icon_rect := icon.get_global_rect()
+			check(canvas.encloses(hud.get_global_rect()) and hud.get_global_rect().encloses(bar_rect) and hud.get_global_rect().encloses(icon_rect), "Bar and icon fit HUD at 640x360: " + locale + " " + String(field))
+			check(icon_rect.end.x <= bar_rect.position.x and absf(icon_rect.get_center().y - bar_rect.get_center().y) <= 1, "Icon sits left of vertically centered bar: " + locale + " " + String(field))
+			check(bar_left < 0 or is_equal_approx(bar_left, bar_rect.position.x), "HUD bars align horizontally: " + locale + " " + String(field))
+			check(previous_bottom < 0 or (icon_rect.position.y >= previous_bottom and icon_rect.position.y - previous_bottom <= 4), "HUD rows are compact without overlap: " + locale + " " + String(field))
+			check(bar.custom_minimum_size == Vector2(210, 10) and not bar.has_theme_stylebox_override("background") and not bar.get_theme_stylebox("background") is StyleBoxEmpty and bar.has_theme_stylebox_override("fill"), "Bar keeps dimensions and inherited background: " + String(field))
+			bar_left = bar_rect.position.x
+			previous_bottom = icon_rect.end.y
+	root.content_scale_size = saved_size
+	TranslationServer.set_locale(saved_locale)
+	settings.hud_visible.assign(saved_visibility)
+	settings.changed.emit()
+
+func status_display_tests() -> void:
+	var menus := root.get_node("Menus")
+	var manager := root.get_node("CompanionManager")
+	var original: MonsterInstance = manager.active_monster
+	var monster := MonsterInstance.create(MonsterRegistry.new().get_monster(&"slimo"))
+	manager.set_active_monster(monster)
+	menus.open_menu(&"status")
+	var view: Control = root.get_node("GameMenus").status_menu
+	var saved_size := root.content_scale_size
+	var saved_locale := TranslationServer.get_locale()
+	root.content_scale_size = Vector2i(640, 360)
+	for field in MonsterStats.FIELDS:
+		monster.stats.set(field, MonsterStats.TECHNICAL_MAX)
+	monster.current_hp = monster.stats.hp
+	monster.current_mp = monster.stats.mp
+	monster.debug_set_satiety(99)
+	monster.receive_food(2, 1)
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		for frame in 4:
+			await process_frame
+		var viewport_rect: Rect2 = view.body.get_parent().get_global_rect()
+		check(view.fields.size() == 7 and view.monster_name.text == "Slimo" and view.refusal.visible, "Status has monster name seven fields and refusal: " + locale)
+		check(viewport_rect.encloses(view.monster_name.get_global_rect()) and viewport_rect.encloses(view.refusal.get_global_rect()), "Status name and refusal fit small viewport: " + locale)
+		check(viewport_rect.encloses(view.preview_container.get_global_rect()) and view.preview_container.position.x > view.fields[&"hp"].row.get_parent().position.x, "Status preview fits to right of stat column at 640x360")
+		var previous_y := -1.0
+		for field in view.fields:
+			var entry: Dictionary = view.fields[field]
+			check(entry.icon.texture.resource_path == "res://assets/ui/icons/stats/%s.png" % field and entry.icon.size == Vector2(28, 28) and entry.icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "Status uses enlarged pixel icon: " + String(field))
+			check(viewport_rect.encloses(entry.row.get_global_rect()) and entry.row.get_global_rect().encloses(entry.value.get_global_rect()) and entry.value.size.x >= entry.value.get_minimum_size().x, "Status row and technical maximum values fit 640x360: " + String(field))
+			var key := "SATIETY" if field == &"satiety" else "STAT_" + String(field).to_upper()
+			check(entry.icon.tooltip_text == TranslationServer.translate(key) and entry.label.text == TranslationServer.translate(key), "Status label and tooltip translate: " + locale + " " + String(field))
+			check(entry.row.get_global_rect().position.y > previous_y and entry.value.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT, "Status stats are stacked with right aligned values: " + String(field))
+			check(viewport_rect.encloses(entry.box.get_global_rect()) and entry.label.size.x >= entry.label.get_minimum_size().x and entry.icon.get_global_rect().end.x <= entry.label.get_global_rect().position.x and entry.label.get_global_rect().end.x <= entry.value.get_global_rect().position.x, "Status textbox fits icon label and value without overlap: " + locale + " " + String(field))
+			previous_y = entry.row.get_global_rect().position.y
+			if field in [&"hp", &"mp", &"satiety"]:
+				check(entry.value.text == ("100.0 / 100" if field == &"satiety" else "1000000 / 1000000"), "Status current and maximum values shown: " + String(field))
+			else:
+				check(entry.value.text == "1000000", "Status stat remains a number without bar: " + String(field))
+	check(view.find_children("*", "ProgressBar", true, false).is_empty(), "Status has no progress bars")
+	check(view.preview.own_world_3d and view.preview.find_world_3d() != current_scene.get_world_3d() and view.preview_camera.get_viewport() == view.preview and view.preview.find_children("*", "DirectionalLight3D", true, false).size() == 1, "Preview has isolated world camera and lighting")
+	check(view.preview_model != null and view.preview_model.scene_file_path == monster.definition.visual_scene.resource_path and view.preview_model != manager.get_actor().visual.model, "Preview instantiates the shared model source independently")
+	var preview_id: int = view.preview_model.get_instance_id()
+	view.refresh()
+	check(view.preview_model.get_instance_id() == preview_id, "Stat refresh keeps existing preview model")
+	preview_camera_tests(view)
+	view.refresh()
+	var animated_source := Node3D.new()
+	var player := AnimationPlayer.new()
+	var animation_tree := AnimationTree.new()
+	animated_source.add_child(player)
+	animated_source.add_child(animation_tree)
+	player.owner = animated_source
+	animation_tree.owner = animated_source
+	var packed := PackedScene.new()
+	packed.pack(animated_source)
+	animated_source.free()
+	view._update_preview(packed)
+	check(view.preview_model.find_children("*", "AnimationPlayer", true, false).size() == 1 and view.preview_model.find_children("*", "AnimationTree", true, false).size() == 1 and view.preview_model.process_mode == Node.PROCESS_MODE_DISABLED, "Preview preserves animation nodes without processing or starting playback")
+	view.refresh()
+	preview_id = view.preview_model.get_instance_id()
+	monster.stats.mp = 0
+	monster.current_hp = 0
+	monster.debug_set_satiety(0)
+	check(view.fields[&"mp"].value.text == "0 / 0" and view.fields[&"hp"].value.text == "0 / 1000000" and view.fields[&"satiety"].value.text == "0.0 / 100" and not view.refusal.visible, "Status handles empty vitals zero max MP and satiety")
+	manager.set_active_monster(original)
+	check(view.monster_name.text == TranslationServer.translate(original.definition.display_name_key), "Status refreshes on active monster switch")
+	check(view.preview_model.get_instance_id() != preview_id and view.preview_model.scene_file_path == original.definition.visual_scene.resource_path and view.preview.get_child_count() == 4, "Monster switch replaces preview without duplicate models")
+	menus.back()
+	check(not view.visible and not paused, "Status back navigation closes and resumes")
+	check(view.preview.render_target_update_mode == SubViewport.UPDATE_DISABLED, "Closed status stops preview rendering")
+	root.content_scale_size = saved_size
+	TranslationServer.set_locale(saved_locale)
+
+func preview_camera_tests(view: Control) -> void:
+	var saved_size: Vector2i = view.preview.size
+	view.preview_container.stretch = false
+	for dimensions in [Vector3(0.02, 0.03, 0.01), Vector3(2, 15, 3), Vector3(18, 2, 3), Vector3(2, 3, 25)]:
+		var root_model := Node3D.new()
+		root_model.position = Vector3(4, -2, 7)
+		root_model.scale = Vector3(1.2, 0.8, 1.5)
+		var pivot := Node3D.new()
+		pivot.rotation_degrees = Vector3(10, 35, 5)
+		root_model.add_child(pivot)
+		pivot.owner = root_model
+		var mesh := MeshInstance3D.new()
+		mesh.mesh = BoxMesh.new()
+		mesh.mesh.size = dimensions
+		mesh.position = Vector3(-2, 3, 1)
+		pivot.add_child(mesh)
+		mesh.owner = root_model
+		var extra_mesh := MeshInstance3D.new()
+		extra_mesh.mesh = BoxMesh.new()
+		extra_mesh.mesh.size = dimensions * 0.5
+		extra_mesh.position = Vector3(2, -1, -3)
+		extra_mesh.rotation_degrees = Vector3(0, -20, 0)
+		root_model.add_child(extra_mesh)
+		extra_mesh.owner = root_model
+		var packed := PackedScene.new()
+		packed.pack(root_model)
+		root_model.free()
+		view._update_preview(packed)
+		var instance_mesh: MeshInstance3D = view.preview_model.get_child(0).get_child(0)
+		var expected: AABB = instance_mesh.global_transform * instance_mesh.get_aabb()
+		var extra_instance: MeshInstance3D = view.preview_model.get_child(1)
+		expected = expected.merge(extra_instance.global_transform * extra_instance.get_aabb())
+		check(view._preview_bounds.is_equal_approx(expected) and view.preview_model.scale.is_equal_approx(Vector3(1.2, 0.8, 1.5)), "Camera bounds include nested transforms without rescaling model: " + str(dimensions))
+		for viewport_size in [Vector2i(180, 300), Vector2i(400, 210)]:
+			view.preview.size = viewport_size
+			var camera: Camera3D = view.preview_camera
+			var tan_y := tan(deg_to_rad(camera.fov) * 0.5)
+			var tan_x: float = tan_y * float(viewport_size.x) / viewport_size.y
+			var occupancy := 0.0
+			var all_inside := true
+			for corner in 8:
+				var point: Vector3 = camera.global_transform.affine_inverse() * expected.get_endpoint(corner)
+				var depth := -point.z
+				all_inside = all_inside and depth > camera.near and depth < camera.far and absf(point.x) < depth * tan_x and absf(point.y) < depth * tan_y
+				occupancy = maxf(occupancy, maxf(absf(point.x) / (depth * tan_x), absf(point.y) / (depth * tan_y)))
+			check(all_inside and occupancy > 0.65 and occupancy < 0.98, "Camera fills viewport with safety margin for shape and aspect: " + str(dimensions) + " " + str(viewport_size))
+			check((camera.global_transform.affine_inverse() * expected.get_center()).is_equal_approx(Vector3(0, 0, -camera.global_position.distance_to(expected.get_center()))), "Preview camera points at model bounds center")
+	view.preview.size = saved_size
+	view.preview_container.stretch = true
+
 func integration_tests() -> void:
 	var menus := root.get_node("Menus")
 	check(menus.has_menu(&"debug") == OS.is_debug_build(), "Developer menu registered only in debug")
@@ -292,6 +487,8 @@ func integration_tests() -> void:
 		root.get_node("WorldTime").advance_hours(2)
 		view.refresh()
 		check(monster.care_events().size() == 1 and not view.history.text.is_empty(), "Debug time jump simulates and displays starvation")
+		debug_time_tests(view, monster)
+		debug_care_ui_tests(view, monster)
 		menus.close_menu()
 	var monster: MonsterInstance = root.get_node("CompanionManager").active_monster
 	var identity := monster.instance_id
@@ -312,6 +509,132 @@ func integration_tests() -> void:
 	check(clock.total_seconds > before and monster.satiety < 55, "Simulation resumes after transition")
 	await keyboard_tests()
 	await layout_tests()
+
+func debug_care_event_tests() -> void:
+	var definition := MonsterRegistry.new().get_monster(&"drako")
+	var monster := MonsterInstance.create(definition)
+	var signals := {"changed": 0, "recorded": 0}
+	monster.changed.connect(func(): signals.changed += 1)
+	monster.care_event_recorded.connect(func(_event): signals.recorded += 1)
+	check(not monster.debug_add_care_event(&"UNKNOWN", 1) and not monster.debug_add_care_event(&"STARVATION", -1) and not monster.debug_add_care_event(&"STARVATION", INF) and not monster.debug_add_care_event(&"OVERFEEDING", NAN), "Manual care events reject unknown causes and invalid timestamps")
+	check(monster.care_events().is_empty() and signals.changed == 0 and signals.recorded == 0, "Invalid events produce no mutations or signals")
+	check(monster.debug_add_care_event(&"STARVATION", 42) and monster.debug_add_care_event(&"STARVATION", 42), "Identical manual events can be added")
+	var first: RefCounted = monster.care_events()[0]
+	var second: RefCounted = monster.care_events()[1]
+	check(first != second and first.world_seconds == 42 and first.instance_id == monster.instance_id and first.cause == &"STARVATION", "Manual events have distinct references and correct data")
+	check(signals.changed == 2 and signals.recorded == 2, "Manual additions reuse recorded and changed signals")
+	check(monster.debug_remove_care_event(first) and monster.care_events() == [second], "Removing first identical event preserves the other")
+	var foreign := MonsterInstance.create(definition)
+	foreign.debug_add_care_event(&"STARVATION", 42)
+	check(not monster.debug_remove_care_event(first) and not monster.debug_remove_care_event(foreign.care_events()[0]) and not monster.debug_remove_care_event(null), "Removed foreign and null event references are rejected")
+	check(signals.changed == 3 and signals.recorded == 2, "Removal only emits changed; rejected removals emit nothing")
+	check(monster.debug_remove_care_event(second) and monster.care_events().is_empty(), "Second identical event is independently removable")
+	monster.advance_care(0, 24 * 3600)
+	var hunger_event: RefCounted = monster.care_events()[0]
+	monster.debug_remove_care_event(hunger_event)
+	monster.debug_add_care_event(&"OVERFEEDING", 24 * 3600)
+	check(monster.satiety == 0 and not monster.refusing_food, "Manual overfeeding event does not alter starvation state or cause refusal")
+	monster.debug_clear_care_events()
+	monster.advance_care(24 * 3600, 48 * 3600)
+	check(monster.care_events().is_empty(), "Manual edits and clearing do not rearm ongoing starvation")
+	monster.debug_set_satiety(99)
+	monster.receive_food(2, 48 * 3600)
+	var hp := monster.current_hp
+	var mp := monster.current_mp
+	monster.debug_add_care_event(&"STARVATION", 48 * 3600)
+	monster.debug_remove_care_event(monster.care_events()[0])
+	monster.debug_clear_care_events()
+	check(monster.satiety == 100 and monster.refusing_food and monster.current_hp == hp and monster.current_mp == mp and monster.care_events().is_empty(), "Manual add remove and clear preserve refusal and vitals")
+	check(not monster.receive_food(1, 48 * 3600), "Refusal still prevents real feeding after history edits")
+
+func debug_care_ui_tests(view: Control, monster: MonsterInstance) -> void:
+	monster.debug_clear_care_events()
+	var clock := root.get_node("WorldTime")
+	var now: float = clock.total_seconds
+	view.cause_choice.select(0)
+	view.add_care_event()
+	view.add_care_event()
+	check(monster.care_events().size() == 2 and monster.care_events()[0].world_seconds == now and monster.care_events()[0].instance_id == monster.instance_id, "Debug UI creates events at current world time for active monster")
+	var second: RefCounted = monster.care_events()[1]
+	view.event_choice.select(1)
+	view.event_choice.item_selected.emit(1)
+	view.refresh()
+	check(view.event_choice.get_item_metadata(view.event_choice.selected) == second, "Debug event selection survives refresh")
+	view.remove_selected_care_event()
+	check(monster.care_events().size() == 1 and not monster.care_events().has(second), "Debug UI removes exact selected duplicate")
+	view.cause_choice.select(1)
+	view.add_care_event()
+	check(monster.care_events()[1].cause == &"OVERFEEDING", "Debug cause selector supports overfeeding")
+	var previous_locale := TranslationServer.get_locale()
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		view.refresh()
+		check(view.mistake_count.text == TranslationServer.translate("DEBUG_CARE_MISTAKE_COUNT").format({"count": 2}) and view.cause_choice.get_item_text(1) == TranslationServer.translate("CARE_EVENT_OVERFEEDING"), "Debug mistake count and cause selection translate: " + locale)
+	TranslationServer.set_locale(previous_locale)
+	monster.debug_clear_care_events()
+	check(view.event_choice.item_count == 0 and view.event_choice.disabled and view.mistake_count.text == TranslationServer.translate("DEBUG_CARE_MISTAKE_COUNT").format({"count": 0}), "Clearing history refreshes event selection and count")
+	view.remove_selected_care_event()
+	check(view.result.text == "DEBUG_EVENT_REJECTED" and monster.care_events().is_empty(), "Empty event selection is safely rejected")
+
+func debug_time_tests(view: Control, monster: MonsterInstance) -> void:
+	var clock := root.get_node("WorldTime")
+	var event: RefCounted = monster.care_events()[0]
+	var timestamp: float = event.world_seconds
+	var satiety := monster.satiety
+	var hp := monster.current_hp
+	var mp := monster.current_mp
+	view.numbers.world_day.value = 1
+	view.numbers.world_hour.value = 0
+	view.numbers.world_minute.value = 0
+	view.set_time()
+	check(clock.total_seconds == 0 and monster.satiety == satiety and monster.current_hp == hp and monster.current_mp == mp, "Debug backward time setting changes no monster vitals or satiety")
+	check(monster.care_events().size() == 1 and event.world_seconds == timestamp, "Direct time setting preserves care events and their timestamps")
+	check(view.numbers.world_day.min_value == 1 and view.numbers.world_hour.min_value == 0 and view.numbers.world_hour.max_value == 23 and view.numbers.world_minute.max_value == 59 and view.numbers.jump_days.min_value == 0 and view.numbers.jump_hours.min_value == 0 and view.numbers.jump_minutes.min_value == 0, "Debug time inputs constrain calendar fields and prevent negative durations")
+	view.numbers.world_day.value = 2
+	view.numbers.world_hour.value = 23
+	view.numbers.world_minute.get_line_edit().text = "30"
+	view.numbers.world_minute.apply()
+	view.set_time()
+	check(clock.day() == 2 and clock.hour() == 23 and clock.minute() == 30 and monster.care_events().size() == 1, "Day/hour/minute input commits pending text without simulating care")
+	monster.debug_clear_care_events()
+	monster.debug_set_satiety(8)
+	view.numbers.jump_days.value = 1
+	view.numbers.jump_hours.value = 1
+	view.numbers.jump_minutes.value = 30
+	view.advance_time()
+	check(clock.day() == 4 and clock.hour() == 1 and clock.minute() == 0 and monster.satiety == 0, "Debug duration simulates across days using care logic")
+	check(monster.care_events().size() == 1, "Simulated debug duration records starvation once")
+	event = monster.care_events()[0]
+	check(event.world_seconds == 2 * 86400 + 1800 and event.instance_id == monster.instance_id, "Simulated event retains exact crossing and monster identity")
+	var previous_locale := TranslationServer.get_locale()
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		view.refresh()
+		check(view.history.text.contains(TranslationServer.translate("CARE_EVENT_STARVATION")) and view.history.text.contains("3") and view.history.text.contains("00:30") and view.history.text.contains(String(monster.instance_id)), "Debug care history shows translated cause and event date: " + locale)
+	TranslationServer.set_locale(previous_locale)
+	view.refresh()
+	var saved_history: String = view.history.text
+	view.numbers.world_day.value = 1
+	view.numbers.world_hour.value = 0
+	view.numbers.world_minute.value = 0
+	view.set_time()
+	check(view.history.text == saved_history and event.world_seconds == 2 * 86400 + 1800, "Care history date remains unchanged after resetting clock backwards")
+	var before: float = clock.total_seconds
+	view.numbers.jump_days.value = 0
+	view.numbers.jump_hours.value = 0
+	view.numbers.jump_minutes.value = 0
+	view.advance_time()
+	check(clock.total_seconds == before and view.result.text == "DEBUG_DURATION_INVALID" and monster.care_events().size() == 1, "Zero duration is rejected without simulation")
+	view.numbers.world_day.value = view.numbers.world_day.max_value
+	view.numbers.world_hour.value = 23
+	view.numbers.world_minute.value = 59
+	view.set_time()
+	check(clock.total_seconds == before and view.result.text == "DEBUG_TIME_INVALID", "Out-of-range absolute time is rejected")
+	clock.debug_set_seconds(clock.MAX_WORLD_SECONDS - 30)
+	view.numbers.jump_minutes.value = 1
+	view.advance_time()
+	check(clock.total_seconds == clock.MAX_WORLD_SECONDS - 30 and view.result.text == "DEBUG_DURATION_INVALID", "Duration beyond clock limit is rejected")
+	clock.debug_set_seconds(before)
 
 func layout_tests() -> void:
 	var previous_size := root.content_scale_size

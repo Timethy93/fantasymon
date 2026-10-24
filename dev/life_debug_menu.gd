@@ -5,20 +5,24 @@ var item_choice: OptionButton
 var species_choice: OptionButton
 var parameters: Label
 var history: Label
+var event_choice: OptionButton
+var cause_choice: OptionButton
+var mistake_count: Label
+var _selected_event: RefCounted
 var inventory_text: Label
 var result: Label
 
 func build_content() -> void:
 	_heading("DEBUG_DIRECT")
-	_number("world_hours", "DEBUG_WORLD_HOURS", 0, 1.0e12 / 3600.0, 8)
-	_button("DEBUG_SET_TIME", func():
-		get_node("/root/WorldTime").debug_set_seconds(numbers.world_hours.value * 3600)
-		refresh())
+	_number("world_day", "DEBUG_DAY", 1, floorf(FantasyMonWorldClock.MAX_WORLD_SECONDS / 86400) + 1, 1)
+	_number("world_hour", "DEBUG_HOUR", 0, 23, 8)
+	_number("world_minute", "DEBUG_MINUTE", 0, 59, 0)
+	_button("DEBUG_SET_TIME", set_time)
 	_heading("DEBUG_SIMULATE")
-	_number("jump_hours", "DEBUG_JUMP_HOURS", 0.01, 10000, 1)
-	_button("DEBUG_ADVANCE", func():
-		get_node("/root/WorldTime").advance_hours(numbers.jump_hours.value)
-		refresh())
+	_number("jump_days", "DEBUG_DURATION_DAYS", 0, floorf(FantasyMonWorldClock.MAX_WORLD_SECONDS / 86400), 0)
+	_number("jump_hours", "DEBUG_DURATION_HOURS", 0, 23, 1)
+	_number("jump_minutes", "DEBUG_DURATION_MINUTES", 0, 59, 0)
+	_button("DEBUG_ADVANCE", advance_time)
 	_heading("DEBUG_MONSTER")
 	species_choice = OptionButton.new()
 	var registry := MonsterRegistry.new()
@@ -57,13 +61,27 @@ func build_content() -> void:
 	inventory_text = _label()
 	_heading("DEBUG_CARE_EVENTS")
 	history = _label()
+	mistake_count = _label()
+	_heading("DEBUG_EVENT_SELECTION")
+	event_choice = OptionButton.new()
+	event_choice.fit_to_longest_item = false
+	event_choice.item_selected.connect(func(index: int): _selected_event = event_choice.get_item_metadata(index))
+	body.add_child(event_choice)
+	_button("DEBUG_REMOVE_EVENT", remove_selected_care_event)
+	_heading("DEBUG_EVENT_CAUSE")
+	cause_choice = OptionButton.new()
+	for cause in [MonsterCareEvent.STARVATION, MonsterCareEvent.OVERFEEDING]:
+		cause_choice.add_item(tr("CARE_EVENT_" + String(cause)))
+		cause_choice.set_item_metadata(cause_choice.item_count - 1, cause)
+	body.add_child(cause_choice)
+	_button("DEBUG_ADD_EVENT", add_care_event)
 	_button("DEBUG_CLEAR_EVENTS", func():
 		var monster: MonsterInstance = get_node("/root/CompanionManager").active_monster
 		if monster != null:
 			monster.debug_clear_care_events()
 		refresh())
 	result = _label()
-	first_focus = numbers.world_hours.get_line_edit()
+	first_focus = numbers.world_day.get_line_edit()
 	get_node("/root/WorldTime").changed.connect(refresh)
 	get_node("/root/PlayerInventory").inventory.changed.connect(refresh)
 
@@ -87,7 +105,7 @@ func _number(id: String, key: String, minimum: float, maximum: float, initial: f
 	var value := SpinBox.new()
 	value.min_value = minimum
 	value.max_value = maximum
-	value.step = 0.1 if id in ["world_hours", "jump_hours", "satiety"] else 1.0
+	value.step = 0.1 if id == "satiety" else 1.0
 	value.value = initial
 	value.custom_minimum_size.x = 190
 	row.add_child(value)
@@ -102,6 +120,37 @@ func _button(key: String, action: Callable) -> void:
 
 func _item_id() -> StringName:
 	return item_choice.get_item_metadata(item_choice.selected) if item_choice.selected >= 0 else &""
+
+func _time_seconds(absolute: bool) -> float:
+	var ids := ["world_day", "world_hour", "world_minute"] if absolute else ["jump_days", "jump_hours", "jump_minutes"]
+	var days: float = numbers[ids[0]].value - (1 if absolute else 0)
+	return days * FantasyMonWorldClock.SECONDS_PER_DAY + numbers[ids[1]].value * FantasyMonWorldClock.SECONDS_PER_HOUR + numbers[ids[2]].value * 60.0
+
+func set_time() -> void:
+	var seconds := _time_seconds(true)
+	var success: bool = get_node("/root/WorldTime").debug_set_seconds(seconds)
+	result.text = "DEBUG_TIME_SET" if success else "DEBUG_TIME_INVALID"
+	refresh()
+
+func advance_time() -> void:
+	var seconds := _time_seconds(false)
+	var success: bool = get_node("/root/WorldTime").advance_seconds(seconds)
+	result.text = "DEBUG_TIME_ADVANCED" if success else "DEBUG_DURATION_INVALID"
+	refresh()
+
+func add_care_event() -> void:
+	var monster: MonsterInstance = get_node("/root/CompanionManager").active_monster
+	var success := false
+	if monster != null and cause_choice.selected >= 0:
+		success = monster.debug_add_care_event(cause_choice.get_item_metadata(cause_choice.selected), get_node("/root/WorldTime").total_seconds)
+	result.text = "DEBUG_EVENT_ADDED" if success else "DEBUG_EVENT_REJECTED"
+	refresh()
+
+func remove_selected_care_event() -> void:
+	var monster: MonsterInstance = get_node("/root/CompanionManager").active_monster
+	var success := monster != null and monster.debug_remove_care_event(_selected_event)
+	result.text = "DEBUG_EVENT_REMOVED" if success else "DEBUG_EVENT_REJECTED"
+	refresh()
 
 func _change_items(add: bool) -> void:
 	var session := get_node("/root/PlayerInventory")
@@ -128,8 +177,13 @@ func refresh() -> void:
 	if history == null or not visible:
 		return
 	var clock := get_node("/root/WorldTime")
-	numbers.world_hours.set_value_no_signal(clock.total_seconds / 3600.0)
+	numbers.world_day.set_value_no_signal(clock.day())
+	numbers.world_hour.set_value_no_signal(clock.hour())
+	numbers.world_minute.set_value_no_signal(clock.minute())
 	var monster: MonsterInstance = get_node("/root/CompanionManager").active_monster
+	event_choice.clear()
+	var count := 0
+	var selected_index := -1
 	if monster != null:
 		numbers.satiety.set_value_no_signal(monster.satiety)
 		numbers.current_hp.set_value_no_signal(monster.current_hp)
@@ -139,8 +193,29 @@ func refresh() -> void:
 		parameters.text = tr("DEBUG_PARAMETERS").format({"id": monster.instance_id, "decay": monster.definition.satiety_decay_rate, "requirement": monster.definition.food_requirement})
 		var lines: PackedStringArray = []
 		for event in monster.care_events():
-			lines.append("%s · %.2f h · %s" % [tr("CARE_EVENT_" + String(event.cause)), event.world_seconds / 3600.0, event.instance_id])
+			if event.cause in [MonsterCareEvent.STARVATION, MonsterCareEvent.OVERFEEDING]:
+				count += 1
+			lines.append(tr("DEBUG_EVENT_ENTRY").format({
+				"cause": tr("CARE_EVENT_" + String(event.cause)),
+				"day": floori(event.world_seconds / FantasyMonWorldClock.SECONDS_PER_DAY) + 1,
+				"time": "%02d:%02d" % [floori(fmod(event.world_seconds, FantasyMonWorldClock.SECONDS_PER_DAY) / 3600.0), floori(fmod(event.world_seconds, 3600.0) / 60.0)],
+				"id": event.instance_id}))
+			event_choice.add_item(lines[-1])
+			event_choice.set_item_metadata(event_choice.item_count - 1, event)
+			if event == _selected_event:
+				selected_index = event_choice.item_count - 1
 		history.text = "\n".join(lines) if not lines.is_empty() else tr("DEBUG_NO_EVENTS")
+	else:
+		history.text = "DEBUG_NO_EVENTS"
+	if selected_index < 0 and event_choice.item_count > 0:
+		selected_index = 0
+	_selected_event = event_choice.get_item_metadata(selected_index) if selected_index >= 0 else null
+	if selected_index >= 0:
+		event_choice.select(selected_index)
+	event_choice.disabled = event_choice.item_count == 0
+	mistake_count.text = tr("DEBUG_CARE_MISTAKE_COUNT").format({"count": count})
+	for index in cause_choice.item_count:
+		cause_choice.set_item_text(index, tr("CARE_EVENT_" + String(cause_choice.get_item_metadata(index))))
 	var inventory = get_node("/root/PlayerInventory").inventory
 	var lines: PackedStringArray = [tr("DEBUG_SLOTS").format({"used": inventory.stacks().size(), "capacity": inventory.capacity})]
 	for stack in inventory.stacks():

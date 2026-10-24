@@ -4,6 +4,17 @@ MENU_DEBUG,Debug,Debug
 DEBUG_DIRECT,Direct test state — no simulation,Direkter Testzustand — keine Simulation
 DEBUG_WORLD_HOURS,World time in total hours,Weltzeit in Gesamtstunden
 DEBUG_SET_TIME,Set time directly,Zeit direkt setzen
+DEBUG_DAY,Day,Tag
+DEBUG_HOUR,Hour,Stunde
+DEBUG_MINUTE,Minute,Minute
+DEBUG_DURATION_DAYS,Days to advance,Tage vorspulen
+DEBUG_DURATION_HOURS,Hours to advance,Stunden vorspulen
+DEBUG_DURATION_MINUTES,Minutes to advance,Minuten vorspulen
+DEBUG_TIME_SET,World time set without simulation.,Weltzeit ohne Simulation gesetzt.
+DEBUG_TIME_ADVANCED,Time interval simulated.,Zeitintervall simuliert.
+DEBUG_TIME_INVALID,Time exceeds the supported world time range.,Zeit überschreitet den unterstützten Weltzeitbereich.
+DEBUG_DURATION_INVALID,Enter a positive duration within the remaining world time range.,Eine positive Dauer innerhalb des verbleibenden Weltzeitbereichs eingeben.
+DEBUG_EVENT_ENTRY,{cause} · Day {day} at {time} · {id},{cause} · Tag {day} um {time} · {id}
 DEBUG_SIMULATE,Regular simulation,Reguläre Simulation
 DEBUG_JUMP_HOURS,Advance by game hours,Um Spielstunden vorspulen
 DEBUG_ADVANCE,Simulate time interval,Zeitintervall simulieren
@@ -20,6 +31,14 @@ DEBUG_ADD_ITEM,Add items,Items hinzufügen
 DEBUG_REMOVE_ITEM,Remove items,Items entfernen
 DEBUG_FEED,Simulate feeding,Fütterung simulieren
 DEBUG_CARE_EVENTS,Care events,Pflegeereignisse
+DEBUG_EVENT_SELECTION,Select an event,Ereignis auswählen
+DEBUG_EVENT_CAUSE,Cause for new event,Ursache für neues Ereignis
+DEBUG_ADD_EVENT,Add event at current world time,Ereignis zur aktuellen Weltzeit hinzufügen
+DEBUG_REMOVE_EVENT,Remove selected event,Ausgewähltes Ereignis entfernen
+DEBUG_EVENT_ADDED,Care event added.,Pflegeereignis hinzugefügt.
+DEBUG_EVENT_REMOVED,Care event removed.,Pflegeereignis entfernt.
+DEBUG_EVENT_REJECTED,No valid monster or event selected.,Kein gültiges Monster oder Ereignis ausgewählt.
+DEBUG_CARE_MISTAKE_COUNT,Care mistakes: {count},Pflegefehler: {count}
 DEBUG_CLEAR_EVENTS,Clear event history,Ereignisverlauf zurücksetzen
 DEBUG_DONE,Test state updated.,Testzustand aktualisiert.
 DEBUG_REJECTED,Operation rejected — check quantity and capacity.,Vorgang abgelehnt — Menge und Kapazität prüfen.
