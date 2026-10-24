@@ -61,6 +61,7 @@ func run() -> void:
 	quit(0 if failures == 0 else 1)
 
 func extra_tests() -> void:
+	feeding_quantity_tests()
 	debug_care_event_tests()
 	var registry := MonsterRegistry.new()
 	var drako := MonsterInstance.create(registry.get_monster(&"drako"))
@@ -95,6 +96,38 @@ func extra_tests() -> void:
 	drako.receive_food(10, 200)
 	check(not drako.refusing_food and drako.care_events().size() == 1, "Exactly 100 is not overfeeding")
 	await item_tests()
+
+func feeding_quantity_tests() -> void:
+	var inventory := FantasyMonInventory.new(3)
+	var service := FantasyMonFeedingService.new()
+	var apple: Resource = load("res://data/items/catalog.tres").get_item(&"apple")
+	var definition := MonsterRegistry.new().get_monster(&"drako")
+	var monster := MonsterInstance.create(definition)
+	monster.debug_set_satiety(0)
+	inventory.add(apple, 5)
+	for count in [0, -1, 6]:
+		var rejected := service.feed_many(monster, inventory, apple, 0, count)
+		check(rejected.consumed == 0 and rejected.result != &"FEED_OK" and inventory.quantity(&"apple") == 5 and monster.satiety == 0, "Invalid feeding quantity changes nothing: " + str(count))
+	var outcome := service.feed_many(monster, inventory, apple, 0, 3)
+	check(outcome.requested == 3 and outcome.consumed == 3 and outcome.result == &"FEED_OK" and inventory.quantity(&"apple") == 2 and monster.satiety == 30, "Quantity feeding commits exactly three individual effects and items")
+	monster.debug_set_satiety(85)
+	inventory.add(apple, 3)
+	outcome = service.feed_many(monster, inventory, apple, 100, 5)
+	check(outcome.consumed == 2 and outcome.result == &"FEED_REFUSED" and inventory.quantity(&"apple") == 3 and monster.satiety == 100 and monster.care_events().size() == 1, "Batch stops at refusal after successful overfeeding without losing unconsumed pieces")
+	outcome = service.feed_many(monster, inventory, apple, 100, 2)
+	check(outcome.consumed == 0 and inventory.quantity(&"apple") == 3 and monster.care_events().size() == 1, "Already refusing monster consumes nothing in batch")
+	var rejecting := RejectingMonster.new(definition)
+	var stacks := inventory.stacks()
+	outcome = service.feed_many(rejecting, inventory, apple, 100, 2)
+	check(outcome.consumed == 0 and rejecting.attempts == 1 and inventory.stacks() == stacks, "Rejected first piece rolls inventory back and stops batch")
+	monster.debug_set_satiety(0)
+	var nested := {"result": &""}
+	monster.changed.connect(func(): nested.result = service.feed_many(monster, inventory, apple, 100, 1).result, CONNECT_ONE_SHOT)
+	outcome = service.feed_many(monster, inventory, apple, 100, 1)
+	check(outcome.consumed == 1 and nested.result == &"FEED_BUSY", "Batch rejects synchronous reentry")
+	inventory.changed.connect(func(): inventory.remove(&"apple", inventory.quantity(&"apple")), CONNECT_ONE_SHOT)
+	outcome = service.feed_many(monster, inventory, apple, 100, 2)
+	check(outcome.consumed == 1 and outcome.result == &"FEED_NO_ITEM" and monster.satiety == 20 and inventory.quantity(&"apple") == 0, "Each piece rechecks stock after callbacks alter inventory")
 
 func item_tests() -> void:
 	var catalog := load("res://data/items/catalog.tres")
@@ -240,6 +273,39 @@ func menu_tests() -> void:
 	var old_count: int = root.get_node("PlayerInventory").inventory.quantity(&"apple")
 	inventory_menu.use_selected()
 	check(monster.satiety == 10 and root.get_node("PlayerInventory").inventory.quantity(&"apple") == old_count - 1, "UI calls same feeding service")
+	menus.open_menu(&"food")
+	var food_view = root.get_node("GameMenus").food_menu
+	for index in food_view.list.item_count:
+		if food_view.list.get_item_metadata(index) == &"apple":
+			food_view.list.select(index)
+			food_view._selected(index)
+	var available: int = root.get_node("PlayerInventory").inventory.quantity(&"apple")
+	check(food_view.quantity.value == 1 and food_view.quantity.min_value == 1 and food_view.quantity.max_value == available, "Feeding view starts at one and bounds quantity by total stock")
+	food_view.quantity.value = available + 20
+	check(food_view.quantity.value == available, "Feeding UI clamps quantities above stock")
+	food_view.quantity.value = -2
+	check(food_view.quantity.value == 1, "Feeding UI prevents nonpositive quantity")
+	food_view.quantity.value = 2
+	monster.debug_set_satiety(0)
+	food_view.use_selected()
+	check(monster.satiety == 20 and root.get_node("PlayerInventory").inventory.quantity(&"apple") == available - 2 and food_view._last_outcome.consumed == 2 and food_view.quantity.max_value == available - 2, "Feeding view consumes selected quantity and refreshes remaining bound")
+	var saved_locale := TranslationServer.get_locale()
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		food_view.refresh()
+		check(food_view.result.text == TranslationServer.translate("FEED_BATCH_OK").format({"consumed": 2, "requested": 2}), "Quantity feeding result translates with counts: " + locale)
+	monster.debug_set_satiety(99)
+	food_view.quantity.value = 2
+	food_view.use_selected()
+	check(food_view._last_outcome.consumed == 1 and food_view._last_outcome.result == &"FEED_REFUSED" and root.get_node("PlayerInventory").inventory.quantity(&"apple") == available - 3, "Feeding UI reports partial success without consuming refused piece")
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		food_view.refresh()
+		check(food_view.result.text == TranslationServer.translate("FEED_BATCH_STOPPED").format({"consumed": 1, "requested": 2, "reason": TranslationServer.translate("FEED_REFUSED")}), "Partial feeding result translates count and stop reason: " + locale)
+	TranslationServer.set_locale(saved_locale)
+	food_view.quantity.value = 2
+	food_view._selected(0)
+	check(food_view.quantity.value == 1, "Choosing another food resets quantity to one")
 	menus.close_menu()
 	await hud_tests()
 

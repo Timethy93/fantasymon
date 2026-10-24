@@ -66,6 +66,10 @@ ITEM_APPLE_DESC,A crisp apple.,Ein knackiger Apfel.
 ITEM_MUSHROOM,Mushroom,Pilz
 ITEM_MUSHROOM_DESC,A simple edible mushroom.,Ein einfacher Speisepilz.
 FEED_OK,Food given.,Futter gegeben.
+FEED_QUANTITY,Quantity to feed,Futtermenge
+FEED_INVALID_QUANTITY,Choose a quantity of at least 1.,Eine Menge von mindestens 1 wählen.
+FEED_BATCH_OK,Fed {consumed} of {requested} pieces.,{consumed} von {requested} Stück verfüttert.
+FEED_BATCH_STOPPED,Fed {consumed} of {requested} pieces. {reason},{consumed} von {requested} Stück verfüttert. {reason}
 FEED_BUSY,Feeding is already in progress.,Eine Fütterung läuft bereits.
 FEED_NO_MONSTER,No active companion.,Kein aktiver Begleiter.
 FEED_NOT_FOOD,This item is not food.,Dieses Item ist kein Futter.
