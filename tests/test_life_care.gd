@@ -245,6 +245,7 @@ func menu_tests() -> void:
 
 func hud_tests() -> void:
 	await hud_vital_display_tests()
+	await status_display_tests()
 	var hud := root.get_node("GameHud")
 	var monster: MonsterInstance = root.get_node("CompanionManager").active_monster
 	monster.current_hp = 7
@@ -261,7 +262,7 @@ func hud_tests() -> void:
 	var old_locale := TranslationServer.get_locale()
 	TranslationServer.set_locale("de")
 	await process_frame
-	check(hud.monster_hud.fields[&"satiety"].label.text.begins_with("Sättigung") and hud.time_hud.label.text.begins_with("Tag"), "Live HUD translation")
+	check(hud.monster_hud.fields[&"satiety"].icon.tooltip_text.begins_with("Sättigung") and hud.time_hud.label.text.begins_with("Tag"), "Live HUD translation")
 	TranslationServer.set_locale(old_locale)
 	var Settings = load("res://scripts/game_settings.gd")
 	var path := "res://.godot/life_test_settings.cfg"
@@ -296,14 +297,14 @@ func hud_vital_display_tests() -> void:
 		TranslationServer.set_locale(locale)
 		for field in [&"hp", &"mp"]:
 			replacement.set("current_" + String(field), 0)
-			check(hud.fields[field].bar.value == 0 and hud.fields[field].label.text == TranslationServer.translate("STAT_" + String(field).to_upper()), "Empty vital bar has translated label without numbers: " + locale + " " + String(field))
+			check(hud.fields[field].bar.value == 0 and hud.fields[field].icon.tooltip_text == TranslationServer.translate("STAT_" + String(field).to_upper()), "Empty vital bar has translated icon tooltip: " + locale + " " + String(field))
 			replacement.set("current_" + String(field), replacement.stats.get(field))
 			check(hud.fields[field].bar.value == replacement.stats.get(field) and hud.fields[field].bar.max_value == replacement.stats.get(field) and not hud.fields[field].bar.show_percentage, "Full vital bar retains maximum and hides numeric overlay: " + String(field))
 		for satiety in [0.0, 42.5, 100.0]:
 			replacement.debug_set_satiety(satiety)
-			check(hud.fields[&"satiety"].label.text == TranslationServer.translate("SATIETY") and hud.fields[&"satiety"].bar.value == satiety and hud.fields[&"satiety"].bar.max_value == 100 and not hud.fields[&"satiety"].bar.show_percentage, "Satiety keeps bar values with translated label only: " + locale + " " + str(satiety))
+			check(hud.fields[&"satiety"].icon.tooltip_text == TranslationServer.translate("SATIETY") and hud.fields[&"satiety"].bar.value == satiety and hud.fields[&"satiety"].bar.max_value == 100 and not hud.fields[&"satiety"].bar.show_percentage, "Satiety keeps bar values with translated icon tooltip: " + locale + " " + str(satiety))
 	replacement.stats.mp = 0
-	check(hud.fields[&"mp"].bar.value == 0 and hud.fields[&"mp"].bar.max_value == 1 and hud.fields[&"mp"].label.text == TranslationServer.translate("STAT_MP"), "Zero maximum MP remains an empty valid bar")
+	check(hud.fields[&"mp"].bar.value == 0 and hud.fields[&"mp"].bar.max_value == 1 and hud.fields[&"mp"].icon.tooltip_text == TranslationServer.translate("STAT_MP"), "Zero maximum MP remains an empty valid bar")
 	for field in [&"hp", &"mp"]:
 		settings.hud_visible[field] = false
 		settings.changed.emit()
@@ -329,20 +330,147 @@ func hud_vital_display_tests() -> void:
 		var previous_bottom := -1.0
 		for field in [&"hp", &"mp", &"satiety"]:
 			var bar: ProgressBar = hud.fields[field].bar
-			var label: Label = hud.fields[field].label
+			var icon: TextureRect = hud.fields[field].icon
+			check(icon.texture.resource_path == "res://assets/ui/icons/stats/%s.png" % field and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST and icon.size == Vector2(24, 24), "HUD uses matching native-size pixel icon with nearest filtering: " + String(field))
+			var expected_colors := {&"hp": Color("#D84B49"), &"mp": Color("#4389D5"), &"satiety": Color("#E6A13F")}
+			check(bar.get_theme_stylebox("fill").bg_color == expected_colors[field], "HUD uses requested fill color: " + String(field))
 			var bar_rect := bar.get_global_rect()
-			var label_rect := label.get_global_rect()
-			check(canvas.encloses(hud.get_global_rect()) and hud.get_global_rect().encloses(bar_rect) and hud.get_global_rect().encloses(label_rect), "Bar and label fit HUD at 640x360: " + locale + " " + String(field))
-			check(label_rect.end.x <= bar_rect.position.x and absf(label_rect.get_center().y - bar_rect.get_center().y) <= 1, "Label sits left of vertically centered bar: " + locale + " " + String(field))
+			var icon_rect := icon.get_global_rect()
+			check(canvas.encloses(hud.get_global_rect()) and hud.get_global_rect().encloses(bar_rect) and hud.get_global_rect().encloses(icon_rect), "Bar and icon fit HUD at 640x360: " + locale + " " + String(field))
+			check(icon_rect.end.x <= bar_rect.position.x and absf(icon_rect.get_center().y - bar_rect.get_center().y) <= 1, "Icon sits left of vertically centered bar: " + locale + " " + String(field))
 			check(bar_left < 0 or is_equal_approx(bar_left, bar_rect.position.x), "HUD bars align horizontally: " + locale + " " + String(field))
-			check(previous_bottom < 0 or (label_rect.position.y >= previous_bottom and label_rect.position.y - previous_bottom <= 4), "HUD rows are compact without overlap: " + locale + " " + String(field))
-			check(bar.custom_minimum_size == Vector2(210, 10) and not bar.has_theme_stylebox_override("background") and not bar.get_theme_stylebox("background") is StyleBoxEmpty and not bar.has_theme_stylebox_override("fill"), "Bar keeps dimensions and inherited background/fill styles: " + String(field))
+			check(previous_bottom < 0 or (icon_rect.position.y >= previous_bottom and icon_rect.position.y - previous_bottom <= 4), "HUD rows are compact without overlap: " + locale + " " + String(field))
+			check(bar.custom_minimum_size == Vector2(210, 10) and not bar.has_theme_stylebox_override("background") and not bar.get_theme_stylebox("background") is StyleBoxEmpty and bar.has_theme_stylebox_override("fill"), "Bar keeps dimensions and inherited background: " + String(field))
 			bar_left = bar_rect.position.x
-			previous_bottom = label_rect.end.y
+			previous_bottom = icon_rect.end.y
 	root.content_scale_size = saved_size
 	TranslationServer.set_locale(saved_locale)
 	settings.hud_visible.assign(saved_visibility)
 	settings.changed.emit()
+
+func status_display_tests() -> void:
+	var menus := root.get_node("Menus")
+	var manager := root.get_node("CompanionManager")
+	var original: MonsterInstance = manager.active_monster
+	var monster := MonsterInstance.create(MonsterRegistry.new().get_monster(&"slimo"))
+	manager.set_active_monster(monster)
+	menus.open_menu(&"status")
+	var view: Control = root.get_node("GameMenus").status_menu
+	var saved_size := root.content_scale_size
+	var saved_locale := TranslationServer.get_locale()
+	root.content_scale_size = Vector2i(640, 360)
+	for field in MonsterStats.FIELDS:
+		monster.stats.set(field, MonsterStats.TECHNICAL_MAX)
+	monster.current_hp = monster.stats.hp
+	monster.current_mp = monster.stats.mp
+	monster.debug_set_satiety(99)
+	monster.receive_food(2, 1)
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		for frame in 4:
+			await process_frame
+		var viewport_rect: Rect2 = view.body.get_parent().get_global_rect()
+		check(view.fields.size() == 7 and view.monster_name.text == "Slimo" and view.refusal.visible, "Status has monster name seven fields and refusal: " + locale)
+		check(viewport_rect.encloses(view.monster_name.get_global_rect()) and viewport_rect.encloses(view.refusal.get_global_rect()), "Status name and refusal fit small viewport: " + locale)
+		check(viewport_rect.encloses(view.preview_container.get_global_rect()) and view.preview_container.position.x > view.fields[&"hp"].row.get_parent().position.x, "Status preview fits to right of stat column at 640x360")
+		var previous_y := -1.0
+		for field in view.fields:
+			var entry: Dictionary = view.fields[field]
+			check(entry.icon.texture.resource_path == "res://assets/ui/icons/stats/%s.png" % field and entry.icon.size == Vector2(28, 28) and entry.icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "Status uses enlarged pixel icon: " + String(field))
+			check(viewport_rect.encloses(entry.row.get_global_rect()) and entry.row.get_global_rect().encloses(entry.value.get_global_rect()) and entry.value.size.x >= entry.value.get_minimum_size().x, "Status row and technical maximum values fit 640x360: " + String(field))
+			var key := "SATIETY" if field == &"satiety" else "STAT_" + String(field).to_upper()
+			check(entry.icon.tooltip_text == TranslationServer.translate(key) and entry.label.text == TranslationServer.translate(key), "Status label and tooltip translate: " + locale + " " + String(field))
+			check(entry.row.get_global_rect().position.y > previous_y and entry.value.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT, "Status stats are stacked with right aligned values: " + String(field))
+			check(viewport_rect.encloses(entry.box.get_global_rect()) and entry.label.size.x >= entry.label.get_minimum_size().x and entry.icon.get_global_rect().end.x <= entry.label.get_global_rect().position.x and entry.label.get_global_rect().end.x <= entry.value.get_global_rect().position.x, "Status textbox fits icon label and value without overlap: " + locale + " " + String(field))
+			previous_y = entry.row.get_global_rect().position.y
+			if field in [&"hp", &"mp", &"satiety"]:
+				check(entry.value.text == ("100.0 / 100" if field == &"satiety" else "1000000 / 1000000"), "Status current and maximum values shown: " + String(field))
+			else:
+				check(entry.value.text == "1000000", "Status stat remains a number without bar: " + String(field))
+	check(view.find_children("*", "ProgressBar", true, false).is_empty(), "Status has no progress bars")
+	check(view.preview.own_world_3d and view.preview.find_world_3d() != current_scene.get_world_3d() and view.preview_camera.get_viewport() == view.preview and view.preview.find_children("*", "DirectionalLight3D", true, false).size() == 1, "Preview has isolated world camera and lighting")
+	check(view.preview_model != null and view.preview_model.scene_file_path == monster.definition.visual_scene.resource_path and view.preview_model != manager.get_actor().visual.model, "Preview instantiates the shared model source independently")
+	var preview_id: int = view.preview_model.get_instance_id()
+	view.refresh()
+	check(view.preview_model.get_instance_id() == preview_id, "Stat refresh keeps existing preview model")
+	preview_camera_tests(view)
+	view.refresh()
+	var animated_source := Node3D.new()
+	var player := AnimationPlayer.new()
+	var animation_tree := AnimationTree.new()
+	animated_source.add_child(player)
+	animated_source.add_child(animation_tree)
+	player.owner = animated_source
+	animation_tree.owner = animated_source
+	var packed := PackedScene.new()
+	packed.pack(animated_source)
+	animated_source.free()
+	view._update_preview(packed)
+	check(view.preview_model.find_children("*", "AnimationPlayer", true, false).size() == 1 and view.preview_model.find_children("*", "AnimationTree", true, false).size() == 1 and view.preview_model.process_mode == Node.PROCESS_MODE_DISABLED, "Preview preserves animation nodes without processing or starting playback")
+	view.refresh()
+	preview_id = view.preview_model.get_instance_id()
+	monster.stats.mp = 0
+	monster.current_hp = 0
+	monster.debug_set_satiety(0)
+	check(view.fields[&"mp"].value.text == "0 / 0" and view.fields[&"hp"].value.text == "0 / 1000000" and view.fields[&"satiety"].value.text == "0.0 / 100" and not view.refusal.visible, "Status handles empty vitals zero max MP and satiety")
+	manager.set_active_monster(original)
+	check(view.monster_name.text == TranslationServer.translate(original.definition.display_name_key), "Status refreshes on active monster switch")
+	check(view.preview_model.get_instance_id() != preview_id and view.preview_model.scene_file_path == original.definition.visual_scene.resource_path and view.preview.get_child_count() == 4, "Monster switch replaces preview without duplicate models")
+	menus.back()
+	check(not view.visible and not paused, "Status back navigation closes and resumes")
+	check(view.preview.render_target_update_mode == SubViewport.UPDATE_DISABLED, "Closed status stops preview rendering")
+	root.content_scale_size = saved_size
+	TranslationServer.set_locale(saved_locale)
+
+func preview_camera_tests(view: Control) -> void:
+	var saved_size: Vector2i = view.preview.size
+	view.preview_container.stretch = false
+	for dimensions in [Vector3(0.02, 0.03, 0.01), Vector3(2, 15, 3), Vector3(18, 2, 3), Vector3(2, 3, 25)]:
+		var root_model := Node3D.new()
+		root_model.position = Vector3(4, -2, 7)
+		root_model.scale = Vector3(1.2, 0.8, 1.5)
+		var pivot := Node3D.new()
+		pivot.rotation_degrees = Vector3(10, 35, 5)
+		root_model.add_child(pivot)
+		pivot.owner = root_model
+		var mesh := MeshInstance3D.new()
+		mesh.mesh = BoxMesh.new()
+		mesh.mesh.size = dimensions
+		mesh.position = Vector3(-2, 3, 1)
+		pivot.add_child(mesh)
+		mesh.owner = root_model
+		var extra_mesh := MeshInstance3D.new()
+		extra_mesh.mesh = BoxMesh.new()
+		extra_mesh.mesh.size = dimensions * 0.5
+		extra_mesh.position = Vector3(2, -1, -3)
+		extra_mesh.rotation_degrees = Vector3(0, -20, 0)
+		root_model.add_child(extra_mesh)
+		extra_mesh.owner = root_model
+		var packed := PackedScene.new()
+		packed.pack(root_model)
+		root_model.free()
+		view._update_preview(packed)
+		var instance_mesh: MeshInstance3D = view.preview_model.get_child(0).get_child(0)
+		var expected: AABB = instance_mesh.global_transform * instance_mesh.get_aabb()
+		var extra_instance: MeshInstance3D = view.preview_model.get_child(1)
+		expected = expected.merge(extra_instance.global_transform * extra_instance.get_aabb())
+		check(view._preview_bounds.is_equal_approx(expected) and view.preview_model.scale.is_equal_approx(Vector3(1.2, 0.8, 1.5)), "Camera bounds include nested transforms without rescaling model: " + str(dimensions))
+		for viewport_size in [Vector2i(180, 300), Vector2i(400, 210)]:
+			view.preview.size = viewport_size
+			var camera: Camera3D = view.preview_camera
+			var tan_y := tan(deg_to_rad(camera.fov) * 0.5)
+			var tan_x: float = tan_y * float(viewport_size.x) / viewport_size.y
+			var occupancy := 0.0
+			var all_inside := true
+			for corner in 8:
+				var point: Vector3 = camera.global_transform.affine_inverse() * expected.get_endpoint(corner)
+				var depth := -point.z
+				all_inside = all_inside and depth > camera.near and depth < camera.far and absf(point.x) < depth * tan_x and absf(point.y) < depth * tan_y
+				occupancy = maxf(occupancy, maxf(absf(point.x) / (depth * tan_x), absf(point.y) / (depth * tan_y)))
+			check(all_inside and occupancy > 0.65 and occupancy < 0.98, "Camera fills viewport with safety margin for shape and aspect: " + str(dimensions) + " " + str(viewport_size))
+			check((camera.global_transform.affine_inverse() * expected.get_center()).is_equal_approx(Vector3(0, 0, -camera.global_position.distance_to(expected.get_center()))), "Preview camera points at model bounds center")
+	view.preview.size = saved_size
+	view.preview_container.stretch = true
 
 func integration_tests() -> void:
 	var menus := root.get_node("Menus")
