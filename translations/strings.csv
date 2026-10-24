@@ -31,6 +31,14 @@ DEBUG_ADD_ITEM,Add items,Items hinzufügen
 DEBUG_REMOVE_ITEM,Remove items,Items entfernen
 DEBUG_FEED,Simulate feeding,Fütterung simulieren
 DEBUG_CARE_EVENTS,Care events,Pflegeereignisse
+DEBUG_EVENT_SELECTION,Select an event,Ereignis auswählen
+DEBUG_EVENT_CAUSE,Cause for new event,Ursache für neues Ereignis
+DEBUG_ADD_EVENT,Add event at current world time,Ereignis zur aktuellen Weltzeit hinzufügen
+DEBUG_REMOVE_EVENT,Remove selected event,Ausgewähltes Ereignis entfernen
+DEBUG_EVENT_ADDED,Care event added.,Pflegeereignis hinzugefügt.
+DEBUG_EVENT_REMOVED,Care event removed.,Pflegeereignis entfernt.
+DEBUG_EVENT_REJECTED,No valid monster or event selected.,Kein gültiges Monster oder Ereignis ausgewählt.
+DEBUG_CARE_MISTAKE_COUNT,Care mistakes: {count},Pflegefehler: {count}
 DEBUG_CLEAR_EVENTS,Clear event history,Ereignisverlauf zurücksetzen
 DEBUG_DONE,Test state updated.,Testzustand aktualisiert.
 DEBUG_REJECTED,Operation rejected — check quantity and capacity.,Vorgang abgelehnt — Menge und Kapazität prüfen.

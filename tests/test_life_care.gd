@@ -61,6 +61,7 @@ func run() -> void:
 	quit(0 if failures == 0 else 1)
 
 func extra_tests() -> void:
+	debug_care_event_tests()
 	var registry := MonsterRegistry.new()
 	var drako := MonsterInstance.create(registry.get_monster(&"drako"))
 	var slimo := MonsterInstance.create(registry.get_monster(&"slimo"))
@@ -293,6 +294,7 @@ func integration_tests() -> void:
 		view.refresh()
 		check(monster.care_events().size() == 1 and not view.history.text.is_empty(), "Debug time jump simulates and displays starvation")
 		debug_time_tests(view, monster)
+		debug_care_ui_tests(view, monster)
 		menus.close_menu()
 	var monster: MonsterInstance = root.get_node("CompanionManager").active_monster
 	var identity := monster.instance_id
@@ -313,6 +315,72 @@ func integration_tests() -> void:
 	check(clock.total_seconds > before and monster.satiety < 55, "Simulation resumes after transition")
 	await keyboard_tests()
 	await layout_tests()
+
+func debug_care_event_tests() -> void:
+	var definition := MonsterRegistry.new().get_monster(&"drako")
+	var monster := MonsterInstance.create(definition)
+	var signals := {"changed": 0, "recorded": 0}
+	monster.changed.connect(func(): signals.changed += 1)
+	monster.care_event_recorded.connect(func(_event): signals.recorded += 1)
+	check(not monster.debug_add_care_event(&"UNKNOWN", 1) and not monster.debug_add_care_event(&"STARVATION", -1) and not monster.debug_add_care_event(&"STARVATION", INF) and not monster.debug_add_care_event(&"OVERFEEDING", NAN), "Manual care events reject unknown causes and invalid timestamps")
+	check(monster.care_events().is_empty() and signals.changed == 0 and signals.recorded == 0, "Invalid events produce no mutations or signals")
+	check(monster.debug_add_care_event(&"STARVATION", 42) and monster.debug_add_care_event(&"STARVATION", 42), "Identical manual events can be added")
+	var first: RefCounted = monster.care_events()[0]
+	var second: RefCounted = monster.care_events()[1]
+	check(first != second and first.world_seconds == 42 and first.instance_id == monster.instance_id and first.cause == &"STARVATION", "Manual events have distinct references and correct data")
+	check(signals.changed == 2 and signals.recorded == 2, "Manual additions reuse recorded and changed signals")
+	check(monster.debug_remove_care_event(first) and monster.care_events() == [second], "Removing first identical event preserves the other")
+	var foreign := MonsterInstance.create(definition)
+	foreign.debug_add_care_event(&"STARVATION", 42)
+	check(not monster.debug_remove_care_event(first) and not monster.debug_remove_care_event(foreign.care_events()[0]) and not monster.debug_remove_care_event(null), "Removed foreign and null event references are rejected")
+	check(signals.changed == 3 and signals.recorded == 2, "Removal only emits changed; rejected removals emit nothing")
+	check(monster.debug_remove_care_event(second) and monster.care_events().is_empty(), "Second identical event is independently removable")
+	monster.advance_care(0, 24 * 3600)
+	var hunger_event: RefCounted = monster.care_events()[0]
+	monster.debug_remove_care_event(hunger_event)
+	monster.debug_add_care_event(&"OVERFEEDING", 24 * 3600)
+	check(monster.satiety == 0 and not monster.refusing_food, "Manual overfeeding event does not alter starvation state or cause refusal")
+	monster.debug_clear_care_events()
+	monster.advance_care(24 * 3600, 48 * 3600)
+	check(monster.care_events().is_empty(), "Manual edits and clearing do not rearm ongoing starvation")
+	monster.debug_set_satiety(99)
+	monster.receive_food(2, 48 * 3600)
+	var hp := monster.current_hp
+	var mp := monster.current_mp
+	monster.debug_add_care_event(&"STARVATION", 48 * 3600)
+	monster.debug_remove_care_event(monster.care_events()[0])
+	monster.debug_clear_care_events()
+	check(monster.satiety == 100 and monster.refusing_food and monster.current_hp == hp and monster.current_mp == mp and monster.care_events().is_empty(), "Manual add remove and clear preserve refusal and vitals")
+	check(not monster.receive_food(1, 48 * 3600), "Refusal still prevents real feeding after history edits")
+
+func debug_care_ui_tests(view: Control, monster: MonsterInstance) -> void:
+	monster.debug_clear_care_events()
+	var clock := root.get_node("WorldTime")
+	var now: float = clock.total_seconds
+	view.cause_choice.select(0)
+	view.add_care_event()
+	view.add_care_event()
+	check(monster.care_events().size() == 2 and monster.care_events()[0].world_seconds == now and monster.care_events()[0].instance_id == monster.instance_id, "Debug UI creates events at current world time for active monster")
+	var second: RefCounted = monster.care_events()[1]
+	view.event_choice.select(1)
+	view.event_choice.item_selected.emit(1)
+	view.refresh()
+	check(view.event_choice.get_item_metadata(view.event_choice.selected) == second, "Debug event selection survives refresh")
+	view.remove_selected_care_event()
+	check(monster.care_events().size() == 1 and not monster.care_events().has(second), "Debug UI removes exact selected duplicate")
+	view.cause_choice.select(1)
+	view.add_care_event()
+	check(monster.care_events()[1].cause == &"OVERFEEDING", "Debug cause selector supports overfeeding")
+	var previous_locale := TranslationServer.get_locale()
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		view.refresh()
+		check(view.mistake_count.text == TranslationServer.translate("DEBUG_CARE_MISTAKE_COUNT").format({"count": 2}) and view.cause_choice.get_item_text(1) == TranslationServer.translate("CARE_EVENT_OVERFEEDING"), "Debug mistake count and cause selection translate: " + locale)
+	TranslationServer.set_locale(previous_locale)
+	monster.debug_clear_care_events()
+	check(view.event_choice.item_count == 0 and view.event_choice.disabled and view.mistake_count.text == TranslationServer.translate("DEBUG_CARE_MISTAKE_COUNT").format({"count": 0}), "Clearing history refreshes event selection and count")
+	view.remove_selected_care_event()
+	check(view.result.text == "DEBUG_EVENT_REJECTED" and monster.care_events().is_empty(), "Empty event selection is safely rejected")
 
 func debug_time_tests(view: Control, monster: MonsterInstance) -> void:
 	var clock := root.get_node("WorldTime")
