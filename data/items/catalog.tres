@@ -1,0 +1,10 @@
+[gd_resource type="Resource" format=3]
+[ext_resource type="Script" path="res://scripts/items/item_catalog.gd" id="1"]
+[ext_resource type="Resource" path="res://data/items/small_meat.tres" id="2"]
+[ext_resource type="Resource" path="res://data/items/apple.tres" id="3"]
+[ext_resource type="Resource" path="res://data/items/mushroom.tres" id="4"]
+[resource]
+script = ExtResource("1")
+items = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4")])
+inventory_capacity = 20
+initial_quantities = Dictionary[StringName, int]({&"small_meat": 5, &"apple": 5, &"mushroom": 5})

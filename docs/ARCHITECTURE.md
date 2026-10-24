@@ -4,32 +4,38 @@
 
 Technische Grundlage sind Godot 4.7.2 und GDScript. Die Darstellung kombiniert vorgerenderte 2D-Hintergründe mit animierten 3D-Charakteren, festen Kameraperspektiven und unsichtbarer 3D-Kollisionsgeometrie.
 
-Die folgende Struktur ist ein einfacher Architekturvorschlag für die schrittweise Umsetzung. Vorgeschlagene Szenen-, Skript- und Datennamen sind keine bereits existierenden Implementierungen. **OFFEN** markiert noch zu treffende Entscheidungen. Dieses Dokument erstellt keine Szenen oder Skripte.
+Dieses Dokument beschreibt den implementierten technischen Prototyp und grenzt zukünftige Systeme davon ab. **OFFEN** markiert noch zu treffende Entscheidungen. Details zu Monsterdaten und Begleitung stehen zentral in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md).
 
 ## Grundprinzip
 
-Ein Schauplatz hält die räumliche Darstellung und seine lokalen Objekte zusammen. Spieler und Partner sind wiederverwendbare Szenen. Fachliche Regeln für Aufzucht, Evolution, Kampf und Stadt werden erst mit dem jeweiligen Entwicklungsschritt ergänzt.
+Ein Schauplatz hält die räumliche Darstellung und seine lokalen Objekte zusammen. Beide Waldsegmente enthalten einen lokalen Player-Knoten mit demselben Steuerungsskript. Der Begleiter wird aus einer wiederverwendbaren Szene erzeugt. Fachliche Regeln für Aufzucht, Evolution, Kampf und Stadt werden erst mit dem jeweiligen Entwicklungsschritt ergänzt.
 
 Direkte Methodenaufrufe reichen für lokale Zusammenarbeit. Signale verbinden klar abgegrenzte Ereignisse wie eine Änderung von Partnerwerten mit der Anzeige. Ein globaler Event-Bus, ein Entity-Component-System oder ein umfangreiches Manager-Netzwerk sind für den geplanten Einstieg nicht vorgesehen.
 
-## Vorgeschlagene Szenenstruktur des Prototyps
+## Szenenstruktur des Prototyps
+
+Vereinfachter Ausschnitt der Waldlichtung einschließlich des zur Laufzeit erzeugten Begleiters:
 
 ```text
 ForestClearing (Node3D)
 ├── Camera3D
-├── Background                 # Darstellungstechnik OFFEN
+├── PrerenderedBackdrop        # PNG-Bildfläche und Verdeckungsmesh zur Laufzeit
+├── ForestBackdrop             # bearbeitbare Quellkulisse, zur Laufzeit ausgeblendet
 ├── WorldGeometry (Node3D)
 │   ├── Ground (StaticBody3D mit CollisionShape3D)
-│   └── Obstacles (statische Kollisionskörper)
+│   ├── Bounds (statische Kollisionskörper)
+│   └── TestRock (StaticBody3D)
 ├── Player (CharacterBody3D)
 │   ├── CollisionShape3D
-│   └── Visual                 # animiertes 3D-Modell
-└── Partner (CharacterBody3D)
+│   └── Visual                 # statisches Platzhaltermesh
+├── EntryPoints (Node3D mit Marker3D)
+├── ToForestPath (Area3D)
+└── Companion (CharacterBody3D) # vom CompanionManager erzeugt
     ├── CollisionShape3D
-    └── Visual                 # animiertes 3D-Modell
+    └── Visual                 # MonsterVisual mit Modell aus der Definition
 ```
 
-Die Kamera bewegt sich im ersten Prototyp nicht. Position, Projektion und Hintergrund werden gemeinsam eingerichtet, damit sichtbare Wege mit der unsichtbaren Geometrie übereinstimmen. Die Kollisionskörper erhalten keine sichtbaren Spiel-Meshes; zur Entwicklung kann die Kollisionsanzeige genutzt werden.
+Die Kamera bewegt sich im ersten Prototyp nicht. Position, Projektion und Hintergrund werden gemeinsam eingerichtet, damit sichtbare Wege mit der Kollisionsgeometrie übereinstimmen. Auf der Lichtung werden die Quellmeshes zur Laufzeit ausgeblendet; der Waldpfad zeichnet seine 3D-Testkulisse weiterhin direkt. Zur Entwicklung kann die Kollisionsanzeige genutzt werden.
 
 Für den ersten 2.5D-Prototyp festgelegt: perspektivische feste Kamera, vorgerendertes PNG, echte 3D-Figuren und Collider sowie einfache 3D-Verdeckungsmeshes. Die Ausgabe bleibt bei 16:9 mit Balken auf abweichenden Seitenverhältnissen. `forest_clearing.tscn` verwendet diese Darstellung; `forest_path.tscn` bleibt vorerst dreidimensional. Technischer Aufbau, Exportanleitung, Tests und Grenzen stehen in [PRERENDERED_FOREST_POC.md](PRERENDERED_FOREST_POC.md).
 
@@ -42,8 +48,8 @@ Für den ersten 2.5D-Prototyp festgelegt: perspektivische feste Kamera, vorgeren
 | Schauplatzszene | Kamera, Hintergrund, lokale Kollisionsgeometrie und Startpositionen zusammenhalten | Erster Prototyp |
 | Spielersteuerung | Eingaben in Bewegung umsetzen und Kollisionen berücksichtigen | Erster Prototyp |
 | Partnersteuerung | Spieler als Ziel erhalten und mit Abstand folgen | Erster Prototyp |
-| Partnerzustand | Später benötigte Aufzuchtdaten unabhängig vom sichtbaren Modell halten | Aufzuchtprototyp |
-| Aufzuchtregeln | Bedürfnisse und Training auf den Partnerzustand anwenden | Aufzuchtprototyp |
+| MonsterInstance | Individuelle Stats und Vitalwerte unabhängig vom Weltkörper halten | Bereits implementierte Monster-Foundation |
+| Life & Care | Weltzeit, Sättigung, Pflegeereignisse und Fütterung; Training bleibt geplant | MVP 1 implementiert |
 | Evolutionsprüfung | Aufzuchtdaten mit definierten Evolutionsbedingungen vergleichen | Evolutionsprototyp |
 | Kampfsteuerung | Automatisches Verhalten und Spielereingriffe koordinieren | Kampfprototyp |
 | Stadtzustand | Rekrutierte Bewohner und daraus abgeleiteten Fortschritt halten | Stadtprototyp |
@@ -53,19 +59,25 @@ Die Bausteine beschreiben Verantwortlichkeiten. Sie benötigen nicht jeweils ein
 
 ## Bewegung und Begleitung
 
-Spieler und Partner bewegen sich über die Godot-Physik mit `CharacterBody3D`. Eingaben werden über die Input Map gebündelt. Die konkrete Zuordnung zwischen Eingabe, Kamera und Bewegung wird beim Prototyp festgelegt.
+Spieler und Partner bewegen sich über die Godot-Physik mit `CharacterBody3D`. Eingaben werden über die Input Map gebündelt. Die Spielerbewegung verwendet die auf den Boden projizierten Kameraachsen; WASD ist die frei belegbare Standardzuordnung.
 
-Die Partnersteuerung erhält eine Referenz auf den Spieler. Zunächst genügt eine einfache Folgebewegung auf der kleinen Lichtung. Ein Abstand verhindert dauerhaftes Auflaufen. Hindernisfälle werden bewusst getestet; bei erforderlicher Wegfindung kann anschließend `NavigationAgent3D` ergänzt werden.
+Die Partnersteuerung erhält eine Referenz auf den Spieler. Eine zeitgestempelte Positionsspur liefert das Ziel mit konfigurierbarer Verzögerung (`follow_delay = 1.0` Sekunden). Nur zeitlich freigegebene Positionen dürfen für freie Verbindungen und Hindernisabkürzungen verwendet werden. Beim Anhalten geht der Laufabstand in einen ruhigen persönlichen Abstand über. Die bekannte Eintrittsposition dient als Vorgeschichte ohne zusätzliche Spawn-Wartezeit. Hindernisfälle werden bewusst getestet; bei erforderlicher Wegfindung kann später `NavigationAgent3D` ergänzt werden.
 
-**OFFEN:** Konkrete Eingaben, Bewegungsparameter, Kollisionsschichten, Kollision zwischen Spieler und Partner sowie die Lösung für festhängende Partner. Navigation und Teleportieren sind noch keine festgelegten Systeme.
+Phase 2 verwendet den Autoload `CompanionManager` als Besitzer der aktiven MonsterInstance. Pro Waldsegment erzeugt er genau einen lokalen `CompanionFollower` aus `scenes/monsters/companion.tscn`. Die `MonsterVisual`-Komponente lädt das Modell aus der Definition und unterstützt `idle`/`walk` mit optionalen Clips. Die zeitlich freigegebene Spielerroute wird über Capsule-geprüfte freie Verbindungen abgekürzt. Zeitversetzte Bewegungsvorgaben und gebremste Annäherung erhalten Richtungswechsel und vermeiden unnötige Umwege sowie Schwingen am Ziel. Delay, Ruheabstand, Beschleunigung und Geschwindigkeit bleiben konfigurierbar. Er kollidiert mit der Welt, blockiert den Spieler nicht und löst keine Area3D-Ausgänge aus. Sichere Eintrittspositionen werden über Physikabfragen geprüft; weitere Details und die Tests bei 30/60/120 Physikschritten stehen in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md).
+
+**OFFEN:** Artspezifische Collider, weitergehende Animationen und Umgang mit komplexeren/dynamischen Hindernissen. Es gibt weiterhin keinen allgemeinen Wegfinder und kein Teleport-Nachholen.
+
+Die bestehende Geschwindigkeitsintegration verwendet getrennt konfigurierbare Beschleunigung und Bremsstärke. Bei zusätzlichem Rückstand zur zeitversetzten Route steigt das Geschwindigkeitslimit begrenzt an; jüngere Spurpositionen bleiben gesperrt. Die Annäherung verwendet dieselbe Bremsstärke und eine Physikschritt-Reserve. Es gibt keine zusätzliche Bewegungssteuerung. Ausgangswerte, Messungen und Einschränkungen stehen im Monsterdokument.
 
 ## Daten und Spiellogik
 
-Für spätere statische Definitionen bieten sich kleine Godot-Resources an, beispielsweise für Monsterformen oder Evolutionsbedingungen. Veränderliche Daten eines konkreten Partners bleiben davon getrennt, damit Training keine gemeinsam genutzten Definitionen verändert.
+Die Monster-Foundation verwendet editierbare `MonsterDefinition`-Resources mit stabilen IDs, Stufe, Base Stats, visueller PackedScene und seit Phase 2 zwei grundlegenden Animationszuordnungen. `MonsterStats` hält die sechs Stats. `MonsterInstance` ist ein RefCounted-Datenobjekt mit eigener Identität, kopierten individuellen Stats und Current HP/MP. `MonsterRegistry` lädt Definitionen bedarfsgesteuert aus `data/monsters/definitions/<id>.tres` und benötigt weiterhin keinen Autoload. Der CompanionManager hält eine solche Instanz über die Waldsegmente hinweg und trennt ihre Daten vom jeweils neu erzeugten Weltkörper. Details, Erweiterungsregeln und Tests stehen in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md).
 
 Aufzucht- und Evolutionsregeln sollen mit Daten arbeiten und keine Abhängigkeit von Kamera oder Charaktermodell benötigen. Eine Evolution kann dadurch später die sichtbare Form wechseln, ohne die gesamte Aufzuchtlogik zu ersetzen.
 
-**OFFEN:** Datenfelder, Formate und Bedingungsmodell. Ressourcen werden erst angelegt, wenn die jeweilige Mechanik konkrete Daten benötigt.
+`WorldTime` liefert zentrale Zeitintervalle; `LifeCare` wendet sie auf die aktive Monsterinstanz an. `PlayerInventory` hält ein szenenunabhängiges Inventarmodell und bindet den unabhängigen Fütterungsdienst an aktive Instanz und Uhr. Itemdefinitionen und Startinventar kommen aus Resources. `Menus` koordiniert die getrennten Oberflächen; `GameMenus` und `GameHud` beobachten die Daten. Zuständigkeiten, Schnittstellen und Tests stehen in [LIFE_CARE_MVP.md](LIFE_CARE_MVP.md).
+
+**OFFEN:** Weitere Pflegebedürfnisse, Schlaf, biologisches Alter und Evolutionsbedingungen. Die bereits beschlossenen Zukunftsentscheidungen bleiben im Monsterdokument maßgeblich.
 
 ## Szenenübergreifender Zustand und Speichern
 
@@ -73,7 +85,7 @@ Der Segmentprototyp verwendet `SceneManager` als Autoload (`scripts/scene_manage
 
 `SegmentExit` (`scripts/segment_exit.gd`) ist ein wiederverwendbarer `Area3D`-Trigger mit `target_scene` und `target_entry`. Die Eintrittspunkte liegen außerhalb der Übergangsflächen. Während Blende und Szenenwechsel sperrt der Manager weitere Übergänge und die Spielerbewegung. Zielszene und Eintrittspunkt werden vor dem Wechsel geprüft. Die WASD-Steuerung bleibt unverändert.
 
-Temporäre Segmentzustände werden beim erneuten Betreten zurückgesetzt. Dauerhafte Spielzustände wie Rekrutierungen, abgeschlossene Quests und wichtige Ereignisse sollen später unabhängig von den Segmentknoten gehalten und gespeichert werden. Dafür ist noch kein Persistenz- oder Speichersystem implementiert. Auch ein künftiger Partnerzustand muss getrennt vom lokalen Szenenaufbau erhalten bleiben.
+Temporäre Segmentzustände werden beim erneuten Betreten zurückgesetzt. Die aktive MonsterInstance bleibt seit Phase 2 im CompanionManager über diese Wechsel erhalten. Dauerhafte Spielzustände wie Rekrutierungen, abgeschlossene Quests und wichtige Ereignisse sollen später ebenfalls unabhängig von Segmentknoten gehalten und gespeichert werden. Dafür ist noch kein Persistenz- oder Speichersystem implementiert; auch der Begleiterzustand wird bisher nicht auf Datenträger gespeichert.
 
 **OFFEN:** Struktur des dauerhaften Spielzustands, Speicherumfang, Dateiformat, Speicherzeitpunkte, Slots und Versionsbehandlung. Szenenknoten sollen nicht das dauerhafte Speicherformat bilden.
 
@@ -86,18 +98,18 @@ Temporäre Segmentzustände werden beim erneuten Betreten zurückgesetzt. Dauerh
 
 Die Kameras bleiben fest. Die bisherigen Kollisionsränder bleiben als Sicherheitsbegrenzungen bestehen; die Übergangsflächen liegen kurz davor. Segment B (`forest_path.tscn`) kann zum Testen auch direkt mit F6 gestartet werden.
 
-## Mögliche spätere Ordneraufteilung
+## Projektordner
 
 ```text
 scenes/       # Schauplätze und wiederverwendbare Charaktere
 scripts/      # Verhalten, nach Verantwortlichkeit gegliedert
-data/         # statische Definitionen, sobald benötigt
+data/         # statische Monsterdefinitionen als .tres
 assets/       # eigene Hintergründe, Modelle, Animationen und Audio
 ui/           # Oberflächenszenen und zugehöriges Verhalten
 docs/         # Design, Architektur und Planung
 ```
 
-Diese Aufteilung ist ein Vorschlag und wird erst bei der Implementierung nach Bedarf angelegt. Ein zusätzliches Framework oder Plugin ist nicht festgelegt.
+Diese Ordner sind vorhanden. `tests/` enthält die wiederholbaren Headless-Prüfungen; `tools/` enthält den Hintergrundexport. Weitere Strukturen werden bei konkretem Bedarf ergänzt.
 
 ## Einstellungen und Übersetzungen
 
@@ -105,7 +117,9 @@ Diese Aufteilung ist ein Vorschlag und wird erst bei der Implementierung nach Be
 
 `SettingsMenu` ist eine einzige Autoload-Szene (`ui/settings_menu.tscn`) mit echten Controls. Ihre Logik (`ui/settings_menu.gd`) bedient den Einstellungsdienst. Sie bleibt bei Segmentwechseln bestehen. ESC öffnet und schließt das Menü; während einer Neubelegung bricht ESC zuerst die Eingabe ab. Tab, Pfeile und Enter sowie die Maus bedienen die Controls. Eine Neubelegung beginnt durch Aktivieren der betreffenden Tastenschaltfläche. Das Panel passt sich dem verfügbaren Fenster an; Schrift und Bedienelemente werden in kleinen Fenstern vergrößert, um die vorhandene Canvas-Skalierung auszugleichen. Die Reiterinhalte sind scrollbar und folgen dem Tastaturfokus.
 
-Das Menü läuft mit `PROCESS_MODE_ALWAYS` und pausiert den SceneTree. Spielerphysik und Area3D-Übergänge ruhen, und `SceneManager.travel_to()` verweigert Aufrufe während der Pause ausdrücklich. Während einer laufenden Segmentblende kann das Menü nicht geöffnet werden. Die Bewegungsimplementierung und Kameras bleiben unverändert.
+Die Menüansichten laufen mit `PROCESS_MODE_ALWAYS`; ausschließlich `Menus` verwaltet die gemeinsame SceneTree-Pause und normale Menütasten. Settings behält nur die Erfassung neuer Bewegungstasten. Menüwechsel entpausieren die Simulation nicht. Spielerphysik, normale Weltzeit und Area3D-Übergänge ruhen; `SceneManager.travel_to()` verweigert Wechsel während der Pause. Während Segmentblenden öffnen keine Menüs. Bewegung und Kameras bleiben unverändert.
+
+Der Interface-Tab ergänzt persistente Sichtbarkeitsschalter für HP, MP, Sättigung und Weltzeit im bestehenden `GameSettings`. Inventar, Pflege und Monsterstatus bleiben getrennte Ansichten. Tastenkürzel, Debug-Exportausschluss und Bedienung stehen im Life-&-Care-Dokument.
 
 **Verbindliche Textregel:** Neue spielerseitige Texte sind immer für Übersetzungen vorzubereiten. Stabile Schlüssel und vollständige englische/deutsche Einträge gehören in `translations/strings.csv`. Godot importiert daraus die in den Projekteinstellungen registrierten Translation-Ressourcen. Englisch ist die Standardsprache, `TranslationServer` schaltet sofort um. Statische Controls erhalten Schlüssel; dynamische Texte verwenden `tr()` mit benannten Platzhaltern und aktualisieren sich bei `NOTIFICATION_TRANSLATION_CHANGED`. Auch Hinweise, Fehler und Tastennamen gehören dazu.
 

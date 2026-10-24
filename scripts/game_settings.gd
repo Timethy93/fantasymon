@@ -7,6 +7,10 @@ signal save_failed
 const SAVE_PATH := "user://settings.cfg"
 const ACTIONS := ["move_forward", "move_backward", "move_left", "move_right"]
 const DEFAULT_KEYS := [KEY_W, KEY_S, KEY_A, KEY_D]
+const UI_KEYS := {&"inventory": KEY_F1, &"care": KEY_F2, &"status": KEY_F3, &"settings": KEY_F4, &"debug": KEY_F12}
+const HUD_FIELDS := [&"hp", &"mp", &"satiety", &"time"]
+@export var save_path: String = SAVE_PATH
+var hud_visible: Dictionary = {&"hp": true, &"mp": true, &"satiety": true, &"time": true}
 
 var language: String = "en"
 var fullscreen: bool = false
@@ -25,7 +29,7 @@ func _load_settings() -> void:
 	for index in ACTIONS.size():
 		bindings[ACTIONS[index]] = DEFAULT_KEYS[index]
 	var config := ConfigFile.new()
-	var error := config.load(SAVE_PATH)
+	var error := config.load(save_path)
 	if error == ERR_FILE_NOT_FOUND:
 		return
 	if error != OK:
@@ -40,6 +44,9 @@ func _load_settings() -> void:
 	var stored_volume: Variant = config.get_value("audio", "master_volume", 1.0)
 	if (stored_volume is float or stored_volume is int) and is_finite(float(stored_volume)):
 		master_volume = clampf(float(stored_volume), 0.0, 1.0)
+	for field in HUD_FIELDS:
+		var shown: Variant = config.get_value("interface", field, true)
+		hud_visible[field] = shown if shown is bool else true
 	var candidate: Dictionary = {}
 	for action in ACTIONS:
 		var key: Variant = config.get_value("controls", action, bindings[action])
@@ -103,9 +110,15 @@ func bind_key(action: String, key: int) -> String:
 	_commit()
 	return ""
 
+func set_hud_visible(field: StringName, value: bool) -> void:
+	if field not in HUD_FIELDS:
+		return
+	hud_visible[field] = value
+	_commit()
+
 
 func _valid_key(key: int) -> bool:
-	return key > 0 and key <= 0x7fffff and key not in [
+	return key > 0 and key <= 0x7fffff and key not in UI_KEYS.values() and key not in [
 		KEY_ESCAPE, KEY_SHIFT, KEY_CTRL, KEY_ALT, KEY_META, KEY_CAPSLOCK, KEY_NUMLOCK
 	]
 
@@ -127,9 +140,11 @@ func _commit() -> void:
 	config.set_value("general", "language", language)
 	config.set_value("general", "fullscreen", fullscreen)
 	config.set_value("audio", "master_volume", master_volume)
+	for field in HUD_FIELDS:
+		config.set_value("interface", field, hud_visible[field])
 	for action in ACTIONS:
 		config.set_value("controls", action, bindings[action])
-	last_error_key = "" if config.save(SAVE_PATH) == OK else "SETTINGS_SAVE_FAILED"
+	last_error_key = "" if config.save(save_path) == OK else "SETTINGS_SAVE_FAILED"
 	changed.emit()
 	if not last_error_key.is_empty():
 		save_failed.emit()

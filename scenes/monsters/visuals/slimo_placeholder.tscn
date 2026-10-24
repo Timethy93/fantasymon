@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="Mesh"]
+radius = 0.6
+height = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material"]
+albedo_color = Color(0.22, 0.65, 0.75, 1)
+roughness = 1.0
+
+[node name="SlimoVisual" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.4, 0)
+mesh = SubResource("Mesh")
+material_override = SubResource("Material")
+
