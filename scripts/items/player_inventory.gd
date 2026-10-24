@@ -23,3 +23,9 @@ func feed(id: StringName) -> StringName:
 		inventory, catalog.get_item(id), get_node("/root/WorldTime").total_seconds)
 	feeding_finished.emit(result)
 	return result
+
+func feed_many(id: StringName, count: int) -> Dictionary:
+	var outcome := feeding.feed_many(get_node("/root/CompanionManager").active_monster,
+		inventory, catalog.get_item(id), get_node("/root/WorldTime").total_seconds, count)
+	feeding_finished.emit(outcome.result)
+	return outcome
