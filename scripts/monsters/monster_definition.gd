@@ -19,6 +19,9 @@ enum EvolutionStage {
 @export var visual_scene: PackedScene
 @export var idle_animation: StringName = &"idle"
 @export var walk_animation: StringName = &"walk"
+@export_range(0.0, 100.0, 0.1) var initial_satiety: float = 100.0
+@export_range(0.0, 100.0, 0.1) var satiety_decay_rate: float = 8.0
+@export_range(0.1, 100.0, 0.1) var food_requirement: float = 1.0
 
 
 static func is_valid_id(id: StringName) -> bool:
@@ -29,6 +32,12 @@ static func is_valid_id(id: StringName) -> bool:
 # Developer diagnostics; player-facing errors must use translation keys.
 func validation_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
+	if not is_finite(initial_satiety) or initial_satiety < 0 or initial_satiety > 100:
+		errors.append("Initial satiety must be between 0 and 100.")
+	if not is_finite(satiety_decay_rate) or satiety_decay_rate < 0:
+		errors.append("Satiety decay must be finite and nonnegative.")
+	if not is_finite(food_requirement) or food_requirement <= 0:
+		errors.append("Food requirement must be finite and positive.")
 	if not is_valid_id(monster_id):
 		errors.append("Monster ID must be a nonempty lowercase identifier.")
 	if display_name_key.is_empty():

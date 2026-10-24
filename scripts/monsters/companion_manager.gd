@@ -1,6 +1,8 @@
 class_name FantasyMonCompanionManager
 extends Node
 
+signal active_monster_changed
+
 @export var default_monster_id: StringName = &"drako"
 
 var _registry := MonsterRegistry.new()
@@ -42,6 +44,7 @@ func set_active_monster(data: MonsterInstance) -> bool:
 	if data != _active_monster:
 		_remove_actor()
 		_active_monster = data
+		active_monster_changed.emit()
 	ensure_companion()
 	return true
 
@@ -75,6 +78,7 @@ func ensure_companion() -> void:
 			last_error = "Invalid default companion: %s" % default_monster_id
 			push_error(last_error)
 			return
+		active_monster_changed.emit()
 	_remove_actor()
 	var packed := load("res://scenes/monsters/companion.tscn") as PackedScene
 	var actor := packed.instantiate() as CompanionFollower

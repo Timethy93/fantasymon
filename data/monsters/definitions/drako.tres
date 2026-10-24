@@ -16,6 +16,8 @@ brain = 10
 [resource]
 script = ExtResource("1")
 monster_id = &"drako"
+satiety_decay_rate = 8.0
+food_requirement = 1.5
 display_name_key = &"MONSTER_DRAKO_NAME"
 evolution_stage = 2
 base_stats = SubResource("Stats")

@@ -49,7 +49,7 @@ Für den ersten 2.5D-Prototyp festgelegt: perspektivische feste Kamera, vorgeren
 | Spielersteuerung | Eingaben in Bewegung umsetzen und Kollisionen berücksichtigen | Erster Prototyp |
 | Partnersteuerung | Spieler als Ziel erhalten und mit Abstand folgen | Erster Prototyp |
 | MonsterInstance | Individuelle Stats und Vitalwerte unabhängig vom Weltkörper halten | Bereits implementierte Monster-Foundation |
-| Aufzuchtregeln | Bedürfnisse und Training auf den Partnerzustand anwenden | Aufzuchtprototyp |
+| Life & Care | Weltzeit, Sättigung, Pflegeereignisse und Fütterung; Training bleibt geplant | MVP 1 implementiert |
 | Evolutionsprüfung | Aufzuchtdaten mit definierten Evolutionsbedingungen vergleichen | Evolutionsprototyp |
 | Kampfsteuerung | Automatisches Verhalten und Spielereingriffe koordinieren | Kampfprototyp |
 | Stadtzustand | Rekrutierte Bewohner und daraus abgeleiteten Fortschritt halten | Stadtprototyp |
@@ -71,11 +71,13 @@ Die bestehende Geschwindigkeitsintegration verwendet getrennt konfigurierbare Be
 
 ## Daten und Spiellogik
 
-Die Monster-Foundation verwendet editierbare `MonsterDefinition`-Resources mit stabilen IDs, Stufe, Base Stats, visueller PackedScene und seit Phase 2 zwei grundlegenden Animationszuordnungen. `MonsterStats` hält die sechs Attribute. `MonsterInstance` ist ein RefCounted-Datenobjekt mit eigener Identität, kopierten individuellen Stats und Current HP/MP. `MonsterRegistry` lädt Definitionen bedarfsgesteuert aus `data/monsters/definitions/<id>.tres` und benötigt weiterhin keinen Autoload. Der neue CompanionManager hält eine solche Instanz über die Waldsegmente hinweg und trennt ihre Daten vom jeweils neu erzeugten Weltkörper. Details, Erweiterungsregeln und Tests stehen in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md).
+Die Monster-Foundation verwendet editierbare `MonsterDefinition`-Resources mit stabilen IDs, Stufe, Base Stats, visueller PackedScene und seit Phase 2 zwei grundlegenden Animationszuordnungen. `MonsterStats` hält die sechs Stats. `MonsterInstance` ist ein RefCounted-Datenobjekt mit eigener Identität, kopierten individuellen Stats und Current HP/MP. `MonsterRegistry` lädt Definitionen bedarfsgesteuert aus `data/monsters/definitions/<id>.tres` und benötigt weiterhin keinen Autoload. Der CompanionManager hält eine solche Instanz über die Waldsegmente hinweg und trennt ihre Daten vom jeweils neu erzeugten Weltkörper. Details, Erweiterungsregeln und Tests stehen in [MONSTER_SYSTEM_DESIGN.md](MONSTER_SYSTEM_DESIGN.md).
 
 Aufzucht- und Evolutionsregeln sollen mit Daten arbeiten und keine Abhängigkeit von Kamera oder Charaktermodell benötigen. Eine Evolution kann dadurch später die sichtbare Form wechseln, ohne die gesamte Aufzuchtlogik zu ersetzen.
 
-**OFFEN:** Weitere Datenfelder für Pflege, Zeit und Evolutionsbedingungen sowie deren konkrete Regeln. Die bereits beschlossenen Zukunftsentscheidungen und die Abgrenzung zur implementierten Foundation sind in `MONSTER_SYSTEM_DESIGN.md` festgehalten.
+`WorldTime` liefert zentrale Zeitintervalle; `LifeCare` wendet sie auf die aktive Monsterinstanz an. `PlayerInventory` hält ein szenenunabhängiges Inventarmodell und bindet den unabhängigen Fütterungsdienst an aktive Instanz und Uhr. Itemdefinitionen und Startinventar kommen aus Resources. `Menus` koordiniert die getrennten Oberflächen; `GameMenus` und `GameHud` beobachten die Daten. Zuständigkeiten, Schnittstellen und Tests stehen in [LIFE_CARE_MVP.md](LIFE_CARE_MVP.md).
+
+**OFFEN:** Weitere Pflegebedürfnisse, Schlaf, biologisches Alter und Evolutionsbedingungen. Die bereits beschlossenen Zukunftsentscheidungen bleiben im Monsterdokument maßgeblich.
 
 ## Szenenübergreifender Zustand und Speichern
 
@@ -115,7 +117,9 @@ Diese Ordner sind vorhanden. `tests/` enthält die wiederholbaren Headless-Prüf
 
 `SettingsMenu` ist eine einzige Autoload-Szene (`ui/settings_menu.tscn`) mit echten Controls. Ihre Logik (`ui/settings_menu.gd`) bedient den Einstellungsdienst. Sie bleibt bei Segmentwechseln bestehen. ESC öffnet und schließt das Menü; während einer Neubelegung bricht ESC zuerst die Eingabe ab. Tab, Pfeile und Enter sowie die Maus bedienen die Controls. Eine Neubelegung beginnt durch Aktivieren der betreffenden Tastenschaltfläche. Das Panel passt sich dem verfügbaren Fenster an; Schrift und Bedienelemente werden in kleinen Fenstern vergrößert, um die vorhandene Canvas-Skalierung auszugleichen. Die Reiterinhalte sind scrollbar und folgen dem Tastaturfokus.
 
-Das Menü läuft mit `PROCESS_MODE_ALWAYS` und pausiert den SceneTree. Spielerphysik und Area3D-Übergänge ruhen, und `SceneManager.travel_to()` verweigert Aufrufe während der Pause ausdrücklich. Während einer laufenden Segmentblende kann das Menü nicht geöffnet werden. Die Bewegungsimplementierung und Kameras bleiben unverändert.
+Die Menüansichten laufen mit `PROCESS_MODE_ALWAYS`; ausschließlich `Menus` verwaltet die gemeinsame SceneTree-Pause und normale Menütasten. Settings behält nur die Erfassung neuer Bewegungstasten. Menüwechsel entpausieren die Simulation nicht. Spielerphysik, normale Weltzeit und Area3D-Übergänge ruhen; `SceneManager.travel_to()` verweigert Wechsel während der Pause. Während Segmentblenden öffnen keine Menüs. Bewegung und Kameras bleiben unverändert.
+
+Der Interface-Tab ergänzt persistente Sichtbarkeitsschalter für HP, MP, Sättigung und Weltzeit im bestehenden `GameSettings`. Inventar, Pflege und Monsterstatus bleiben getrennte Ansichten. Tastenkürzel, Debug-Exportausschluss und Bedienung stehen im Life-&-Care-Dokument.
 
 **Verbindliche Textregel:** Neue spielerseitige Texte sind immer für Übersetzungen vorzubereiten. Stabile Schlüssel und vollständige englische/deutsche Einträge gehören in `translations/strings.csv`. Godot importiert daraus die in den Projekteinstellungen registrierten Translation-Ressourcen. Englisch ist die Standardsprache, `TranslationServer` schaltet sofort um. Statische Controls erhalten Schlüssel; dynamische Texte verwenden `tr()` mit benannten Platzhaltern und aktualisieren sich bei `NOTIFICATION_TRANSLATION_CHANGED`. Auch Hinweise, Fehler und Tastennamen gehören dazu.
 

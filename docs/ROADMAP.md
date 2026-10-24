@@ -27,6 +27,8 @@ Aufzucht, Evolution, Kampf, Stadtaufbau und Speichern sind für diese Abnahme ni
 
 ## 2. Kleine Aufzuchtschleife
 
+**Technischer Zwischenstand:** Life & Care MVP 1 implementiert die erste Versorgungsschleife mit Sättigung, Lebensmitteln, Inventar, Fütterung und internen Pflegeereignissen. Weltzeit, HUD, getrennte Spielmenüs und Debug-UI sind geprüft; siehe [LIFE_CARE_MVP.md](LIFE_CARE_MVP.md). Training und weitere Bedürfnisse fehlen weiterhin. Damit ist diese Roadmap-Stufe noch nicht vollständig abgenommen.
+
 **Ziel:** Versorgung und Training des Partners erstmals spielbar machen.
 
 - Einen kleinen Satz an Bedürfnissen und eine Trainingsmöglichkeit auswählen.
@@ -36,7 +38,7 @@ Aufzucht, Evolution, Kampf, Stadtaufbau und Speichern sind für diese Abnahme ni
 
 **Abnahme:** Der Spieler kann einen Bedarf erkennen, darauf reagieren und eine Trainingswirkung am Partnerzustand nachvollziehen.
 
-**OFFEN:** Bedürfnisse, Zeitmodell, Wertebereiche, Trainingswirkung, Kosten und Folgen von Vernachlässigung. Diese Regeln müssen vor ihrer Umsetzung festgelegt werden.
+**OFFEN:** Regeln und Werte weiterer Bedürfnisse, finale Abstimmung der MVP-Testwerte, Trainingswirkung, Kosten und weitere Folgen von Vernachlässigung. Weltzeit und Sättigungsregeln des MVP sind bereits festgelegt; sie werden im Life-&-Care-Dokument beschrieben.
 
 ## 3. Verzweigte Evolution erproben
 

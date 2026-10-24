@@ -1,4 +1,65 @@
 keys,en,de
+MENU_INVENTORY,Inventory,Inventar
+MENU_DEBUG,Debug,Debug
+DEBUG_DIRECT,Direct test state — no simulation,Direkter Testzustand — keine Simulation
+DEBUG_WORLD_HOURS,World time in total hours,Weltzeit in Gesamtstunden
+DEBUG_SET_TIME,Set time directly,Zeit direkt setzen
+DEBUG_SIMULATE,Regular simulation,Reguläre Simulation
+DEBUG_JUMP_HOURS,Advance by game hours,Um Spielstunden vorspulen
+DEBUG_ADVANCE,Simulate time interval,Zeitintervall simulieren
+DEBUG_MONSTER,Monster test state,Monster-Testzustand
+DEBUG_CURRENT_HP,Current HP,Aktuelle HP
+DEBUG_CURRENT_MP,Current MP,Aktuelle MP
+STAT_HP_MAX,Max HP,Maximale HP
+STAT_MP_MAX,Max MP,Maximale MP
+DEBUG_SELECT_MONSTER,Use selected test species,Ausgewählte Testart verwenden
+DEBUG_APPLY_MONSTER,Apply monster values directly,Monsterwerte direkt setzen
+DEBUG_INVENTORY,Inventory test state,Inventar-Testzustand
+DEBUG_QUANTITY,Quantity,Menge
+DEBUG_ADD_ITEM,Add items,Items hinzufügen
+DEBUG_REMOVE_ITEM,Remove items,Items entfernen
+DEBUG_FEED,Simulate feeding,Fütterung simulieren
+DEBUG_CARE_EVENTS,Care events,Pflegeereignisse
+DEBUG_CLEAR_EVENTS,Clear event history,Ereignisverlauf zurücksetzen
+DEBUG_DONE,Test state updated.,Testzustand aktualisiert.
+DEBUG_REJECTED,Operation rejected — check quantity and capacity.,Vorgang abgelehnt — Menge und Kapazität prüfen.
+DEBUG_PARAMETERS,Instance {id} · Decay {decay}/h · Food requirement {requirement},Instanz {id} · Verlust {decay}/h · Futterbedarf {requirement}
+DEBUG_NO_EVENTS,No care events.,Keine Pflegeereignisse.
+DEBUG_SLOTS,Slots: {used} / {capacity},Slots: {used} / {capacity}
+CARE_EVENT_STARVATION,Starvation,Verhungern
+CARE_EVENT_OVERFEEDING,Overfeeding,Überfütterung
+TAB_INTERFACE,Interface,Oberfläche
+HUD_SHOW_HP,Show HP,HP anzeigen
+HUD_SHOW_MP,Show MP,MP anzeigen
+HUD_SHOW_SATIETY,Show satiety,Sättigung anzeigen
+HUD_SHOW_TIME,Show world time,Weltzeit anzeigen
+WORLD_TIME_FORMAT,Day {day} · {hour}:{minute},Tag {day} · {hour}:{minute}
+MENU_CARE,Care,Pflege
+MENU_STATUS,Monster status,Monsterstatus
+MENU_BACK,Back / Close,Zurück / Schließen
+CARE_FEED,Feed,Füttern
+ITEM_USE,Use food,Futter verwenden
+INVENTORY_EMPTY,No matching items.,Keine passenden Items.
+ITEM_SMALL_MEAT,Small Meat,Kleines Fleischstück
+ITEM_SMALL_MEAT_DESC,A small serving of food.,Eine kleine Futterportion.
+ITEM_APPLE,Apple,Apfel
+ITEM_APPLE_DESC,A crisp apple.,Ein knackiger Apfel.
+ITEM_MUSHROOM,Mushroom,Pilz
+ITEM_MUSHROOM_DESC,A simple edible mushroom.,Ein einfacher Speisepilz.
+FEED_OK,Food given.,Futter gegeben.
+FEED_BUSY,Feeding is already in progress.,Eine Fütterung läuft bereits.
+FEED_NO_MONSTER,No active companion.,Kein aktiver Begleiter.
+FEED_NOT_FOOD,This item is not food.,Dieses Item ist kein Futter.
+FEED_NO_ITEM,This item is not available.,Dieses Item ist nicht verfügbar.
+FEED_REFUSED,The monster is temporarily refusing food.,Das Monster verweigert vorübergehend Futter.
+FEED_UNSUPPORTED,This food effect is not supported.,Dieser Futtereffekt wird noch nicht unterstützt.
+STAT_HP,HP,HP
+STAT_MP,MP,MP
+STAT_ATK,ATK,ATK
+STAT_DEFENSE,DEF,DEF
+STAT_SPEED,SPEED,SPEED
+STAT_BRAIN,BRAIN,BRAIN
+SATIETY,Satiety,Sättigung
 MONSTER_DRAKO_NAME,Drako,Drako
 MONSTER_SLIMO_NAME,Slimo,Slimo
 MONSTER_FENRI_NAME,Fenri,Fenri

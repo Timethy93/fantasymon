@@ -45,7 +45,9 @@ Implementiert sind kamerarelative, frei belegbare Bewegungstasten und einfache k
 
 Die Versorgung und das Training des Partners bilden die Grundlage der Aufzucht. Bedürfnisse sollen den Spieler zu Fürsorgehandlungen veranlassen; Training beeinflusst die Entwicklung des Monsters.
 
-Bedürfnisse und die sechs trainierbaren Attribute sind im Monsterdokument festgelegt. Die Pflege- und Trainingssimulation ist noch nicht implementiert. **OFFEN:** Wertebereiche und Änderungsraten der Bedürfnisse, konkretes Zeitmodell, Trainingsarten, Kosten, Auswirkungen und Folgen vernachlässigter Versorgung.
+Die erste Versorgungsschleife ist implementiert: Sättigung nimmt mit der Weltzeit ab; vorhandene Lebensmittel können über Inventar oder Pflege verfüttert werden. Überfütterung bewirkt vorübergehende Futterverweigerung; Hunger- und Überfütterungsfehler werden intern als Ereignisse erfasst. HUD und Monsterstatus zeigen vorhandene Werte. Verbindliche Regeln, vorläufige Testwerte und Tests stehen in [LIFE_CARE_MVP.md](LIFE_CARE_MVP.md).
+
+Die Weltzeit läuft mit einer Spielstunde pro realer Minute nur während aktiver Simulation. Weitere Bedürfnisse und Training sind noch nicht simuliert. **OFFEN:** Regeln und Werte weiterer Bedürfnisse, Trainingsarten, Kosten sowie weitere Pflegefolgen. Biologisches Alter und Schlaf sind von der Weltzeituhr getrennte spätere Systeme.
 
 ## Verzweigte Evolution
 
@@ -54,6 +56,8 @@ Der Partner kann abhängig von seiner Aufzucht unterschiedliche Evolutionsformen
 Sieben Evolutionsstufen, verzweigte Bedingungen und grundlegende Stat- und Todesregeln sind im Monsterdokument festgelegt; die Evolution selbst ist noch nicht implementiert. **OFFEN:** Monsteranzahl, konkrete Voraussetzungen und Boni, Prüfzeitpunkte, Priorität bei mehreren erfüllten Bedingungen, Sichtbarkeit der Kriterien, Lebensspanne und Wiedergeburt.
 
 ## Halbautomatischer Kampf
+
+Die unabhängigen Attribut- und Elementsysteme sowie ihre offensiven Vorteile und abgeleiteten Schwächen sind im [Monsterdokument](MONSTER_SYSTEM_DESIGN.md#attribute-und-elemente) verbindlich festgelegt. Eine technische Umsetzung oder numerische Schadensformel gibt es noch nicht.
 
 Der Kampf verbindet selbstständiges Monsterverhalten mit Einfluss durch den Spieler. Welche Aktionen automatisch ablaufen und welche Eingriffe der Spieler erhält, muss vor der Umsetzung eines Kampfprototyps geklärt werden.
 
@@ -66,6 +70,8 @@ Monster können rekrutiert werden und zum Wiederaufbau einer zentralen Stadt bei
 **OFFEN:** Rekrutierungsbedingungen, konkrete Bewohner, Gebäude, Dienstleistungen, Ausbauabfolge, visuelle Veränderungen und Auswirkungen auf die Aufzucht. Direkte Bauplatzierung durch den Spieler ist nicht entschieden.
 
 ## Umfang und Erfolg des ersten Prototyps
+
+Die verbindliche Richtung für zukünftige Monster ist eine modernisierte PS1-3D-Ästhetik mit eigenständigen Kreaturendesigns. Artstyle-Referenz und das vorläufige Toxipad-Konzept stehen zentral im [Monsterdokument](MONSTER_SYSTEM_DESIGN.md#monster-artstyle-und-toxipad). Toxipad ist ein möglicher Starter und Maskottchen-Kandidat; diese Rollen sind noch nicht beschlossen und im aktuellen Prototyp nicht umgesetzt.
 
 Der erste Prototyp prüft ausschließlich das räumliche Grundgefühl: eine Waldlichtung mit festem Hintergrund, fester Kamera, steuerbarem Spieler, funktionierenden Kollisionen und folgendem Monsterpartner. Platzhalter dürfen die spätere Darstellung erproben; finale Inhalte sind hierfür nicht erforderlich.
 

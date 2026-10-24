@@ -20,8 +20,14 @@ config/icon="res://icon.svg"
 MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
 SceneManager="*uid://dhr7bawgkj4vo"
 GameSettings="*uid://1jw0uyy6oulq"
+Menus="*res://ui/menu_coordinator.gd"
 SettingsMenu="*uid://daveuihubeiyo"
 CompanionManager="*uid://b3m4d4iv60xxx"
+WorldTime="*res://scripts/life/world_clock.gd"
+LifeCare="*res://scripts/life/life_care_service.gd"
+PlayerInventory="*res://scripts/items/player_inventory.gd"
+GameMenus="*res://ui/game/game_menus.gd"
+GameHud="*res://ui/game/game_hud.gd"
 
 [display]
 

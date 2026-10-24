@@ -13,9 +13,11 @@ extends CanvasLayer
 var _capture_action: String = ""
 var _buttons: Dictionary = {}
 var _syncing: bool = false
+var _hud_checks: Dictionary = {}
 
 
 func _ready() -> void:
+	_add_interface_tab()
 	_buttons = {
 		"move_forward": %Forward, "move_backward": %Backward,
 		"move_left": %Left, "move_right": %Right
@@ -34,9 +36,11 @@ func _ready() -> void:
 	settings.save_failed.connect(_show_save_error)
 	get_node("/root/SceneManager").travel_failed.connect(_show_notice)
 	root.resized.connect(_resize_panel)
+	panel.minimum_size_changed.connect(func(): call_deferred("_resize_panel"))
 	_translate_tabs()
 	_sync()
 	_resize_panel()
+	get_node("/root/Menus").register_menu(&"settings", root, _opened, _closed)
 
 
 func _notification(what: int) -> void:
@@ -45,14 +49,32 @@ func _notification(what: int) -> void:
 
 
 func _translate_tabs() -> void:
-	for index in 3:
-		tabs.set_tab_title(index, tr(["TAB_GENERAL", "TAB_CONTROLS", "TAB_AUDIO"][index]))
+	for index in 4:
+		tabs.set_tab_title(index, tr(["TAB_GENERAL", "TAB_CONTROLS", "TAB_AUDIO", "TAB_INTERFACE"][index]))
+
+func _add_interface_tab() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Interface"
+	scroll.follow_focus = true
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tabs.add_child(scroll)
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(content)
+	for field in settings.HUD_FIELDS:
+		var toggle := CheckBox.new()
+		toggle.text = "HUD_SHOW_" + String(field).to_upper()
+		toggle.toggled.connect(func(value: bool): settings.set_hud_visible(field, value))
+		content.add_child(toggle)
+		_hud_checks[field] = toggle
 
 
 func _resize_panel() -> void:
 	var available := root.size
 	# Counter the project's canvas stretch in small native windows.
-	var ui_scale := clampf(1152.0 / float(maxi(1, get_window().size.x)), 1.0, 1.8)
+	var ui_scale := clampf(available.x / float(maxi(1, get_window().size.x)), 1.0, 1.8)
+	# Do not enlarge fixed header/footer controls beyond a small canvas's height.
+	ui_scale = minf(ui_scale, maxf(1.0, available.y / 480.0))
 	root.theme.default_font_size = roundi(18.0 * ui_scale)
 	$Root/Panel/Margin/Content/Title.add_theme_font_size_override("font_size", roundi(30.0 * ui_scale))
 	$Root/Panel/Margin/Content/Hint.add_theme_font_size_override("font_size", roundi(14.0 * ui_scale))
@@ -82,23 +104,13 @@ func _input(event: InputEvent) -> void:
 		else:
 			status.text = error_key
 		return
-	if event.keycode == KEY_ESCAPE:
-		get_viewport().set_input_as_handled()
-		if root.visible:
-			close_menu()
-		else:
-			open_menu()
+	# Non-capture keys and ESC are owned by the shared menu coordinator.
 
 
 func open_menu() -> void:
-	if root.visible or get_tree().paused:
-		return
-	if get_node("/root/SceneManager").transition_in_progress:
-		return
-	for action in settings.ACTIONS:
-		Input.action_release(action)
-	get_tree().paused = true
-	root.show()
+	get_node("/root/Menus").open_menu(&"settings")
+
+func _opened() -> void:
 	_sync()
 	_resize_panel()
 	tabs.current_tab = 0
@@ -106,13 +118,13 @@ func open_menu() -> void:
 
 
 func close_menu() -> void:
-	if not root.visible:
-		return
+	get_node("/root/Menus").close_menu(&"settings")
+
+func _closed() -> void:
 	_capture_action = ""
-	root.hide()
-	for action in settings.ACTIONS:
-		Input.action_release(action)
-	get_tree().paused = false
+
+func is_capturing() -> bool:
+	return not _capture_action.is_empty()
 
 
 func _begin_capture(action: String) -> void:
@@ -136,6 +148,8 @@ func _sync() -> void:
 	%VolumeValue.text = "%d%%" % roundi(settings.master_volume * 100.0)
 	for action in _buttons:
 		_buttons[action].text = settings.key_label(action)
+	for field in _hud_checks:
+		_hud_checks[field].set_pressed_no_signal(settings.hud_visible[field])
 	status.text = settings.last_error_key if not settings.last_error_key.is_empty() else "SETTINGS_SAVED"
 	_syncing = false
 

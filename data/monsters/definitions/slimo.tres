@@ -16,6 +16,8 @@ brain = 22
 [resource]
 script = ExtResource("1")
 monster_id = &"slimo"
+satiety_decay_rate = 5.0
+food_requirement = 0.75
 display_name_key = &"MONSTER_SLIMO_NAME"
 evolution_stage = 1
 base_stats = SubResource("Stats")

@@ -8,7 +8,9 @@
 
 **Implementiert, Phase 2:** Ein zentral verwalteter Begleiter, einfache kollisionsgebundene Folgebewegung entlang der Spielerroute, Neuerzeugung der Weltinstanz bei Segmentwechseln mit Erhalt derselben Monsterdaten und ein visueller Adapter für `idle`/`walk`. Die vorhandenen Platzhalter besitzen keine Animationsclips; fehlende Clips sind ausdrücklich zulässig.
 
-**Nur geplant:** Wilde Monster, Gegner-/Bossverhalten, Training als Spielmechanik, Pflege, Evolution, Zeitverwaltung, Schlaf, Lebensalter, Tod, weitere Animationen und Savegames. Dafür gibt es weiterhin keine leeren Simulationsklassen oder vorläufigen Datenfelder.
+**Implementiert, Life & Care MVP 1:** Zentrale Weltzeit, individuelle Sättigung, Futterverweigerung, Hunger-/Überfütterungsereignisse, datenbasierte Lebensmittel, Inventar und Fütterungsdienst sowie getrennte Menüs, HUD und Entwickleroberfläche. Paketaufteilung, Testwerte und Erweiterungspunkte stehen zentral in [LIFE_CARE_MVP.md](LIFE_CARE_MVP.md).
+
+**Nur geplant:** Attribut- und Elementwirkungen, wilde Monster, Gegner-/Bossverhalten, Training als Spielmechanik, weitere Pflegebedürfnisse, Evolution, Schlaf, biologisches Alter, Tod, weitere Animationen und Savegames. Die folgenden Typregeln und die Monster-Artstyle-Richtung sind verbindlich beschlossen; sie sind noch keine Gameplay-Implementierung oder fertigen Monsterassets.
 
 Die verbindlichen Zukunftsentscheidungen dieses Dokuments ergänzen Game Design und Roadmap, ohne die betreffenden Systeme bereits zu implementieren. Noch fehlende Zahlen und Ereignisdefinitionen bleiben ausdrücklich offen.
 
@@ -27,6 +29,9 @@ Die verbindlichen Zukunftsentscheidungen dieses Dokuments ergänzen Game Design 
 | `visual_scene: PackedScene` | Referenz auf eine unabhängig austauschbare visuelle Szene. |
 | `idle_animation: StringName` | Artspezifischer Clipname für den logischen Zustand `idle`; Standard `idle`. |
 | `walk_animation: StringName` | Artspezifischer Clipname für den logischen Zustand `walk`; Standard `walk`. |
+| `initial_satiety: float` | Konfigurierbarer Startwert der individuellen Sättigung. |
+| `satiety_decay_rate: float` | Sättigungsverlust pro Spielstunde. |
+| `food_requirement: float` | Positiver Futterbedarfsfaktor für die Wirkung von Nahrung. |
 
 Das zentrale Enum `MonsterDefinition.EvolutionStage` besitzt explizite Werte: `BABY=0`, `TRAINING=1`, `KID=2`, `TEEN=3`, `ADULT=4`, `ASCENDED=5`, `MASTER=6`. Vor späteren Savegames dürfen diese Werte nicht beiläufig umnummeriert werden. Es existiert noch keine Evolutionsprüfung.
 
@@ -57,6 +62,7 @@ Eine gültig erzeugte Instanz enthält:
 - Eine Referenz auf die gemeinsame Definition.
 - Eigene individuelle `MonsterStats`, initialisiert durch Kopieren aller Base Stats.
 - Getrennte `current_hp` und `current_mp`, bei Neuerzeugung vollständig aufgefüllt.
+- Eigene Sättigung, vorübergehende Futterverweigerung und Pflegeereignisse. Änderungen werden über Signale gemeldet; die Detailregeln stehen im Life-&-Care-Dokument.
 
 Die öffentliche Identität und Definition werden über Getter angeboten. Auch eine spätere Zuweisung an `instance.stats` kopiert die übergebenen Werte, damit weder Base Stats noch Geschwisterinstanzen versehentlich dieselbe veränderliche Stat-Resource besitzen. Nullzuweisungen werden ignoriert. Verringert sich ein Maximalwert unter den aktuellen Vitalwert, wird dieser begrenzt. Eine Erhöhung des Maximums heilt beziehungsweise füllt nicht automatisch auf. Current HP=0 löst in Phase 1 **keinen** K. o., Tod oder Pflegeeffekt aus.
 
@@ -101,9 +107,66 @@ Eine neue Art hinzufügen:
 
 ## Bereits beschlossene zukünftige Systeme – noch nicht implementiert
 
+### Attribute und Elemente
+
+Attribute und Elemente sind zwei voneinander unabhängige Systeme. „Attribut“ bezeichnet hier Angst, Fable, Wish oder Unknown; die trainierbaren Werte HP, MP, ATK, DEF, SPEED und BRAIN heißen zur Unterscheidung **Stats**. Ein Attribut legt kein Element fest und umgekehrt. Die bestehende `MonsterDefinition` enthält noch keine Attribut- oder Elementfelder; die technischen Testarten erhalten durch diese Dokumentation keine Typzuweisung.
+
+#### Attributvorteile
+
+Ein Pfeil bedeutet einen offensiven Vorteil gegen das Zielattribut:
+
+**Angst → Fable → Wish → Angst**
+
+| Attribut | Vorteil gegen | Schwach gegen |
+| --- | --- | --- |
+| Angst | Fable | Wish |
+| Fable | Wish | Angst |
+| Wish | Angst | Fable |
+| Unknown | Keine | Keine |
+
+Unknown ist in beiden Richtungen attributneutral: Es hat weder attributbedingte Vorteile noch attributbedingte Nachteile.
+
+#### Elementvorteile und abgeleitete Schwächen
+
+Die 13 Elemente sind Fire, Water, Earth, Wind, Nature, Lightning, Ice, Light, Dark, Arcane, Machine, Poison und None. Die folgende Tabelle enthält die verbindlichen offensiven Vorteile. Die Spalte „Schwach gegen“ wird ausschließlich daraus abgeleitet: Steht A als Vorteil gegen B fest, ist B schwach gegen A.
+
+| Element | Offensiv stark gegen | Schwach gegen |
+| --- | --- | --- |
+| Fire | Nature, Ice | Water, Earth |
+| Water | Fire, Earth | Nature, Lightning, Poison |
+| Earth | Fire, Lightning, Wind | Water, Nature |
+| Wind | Poison, Arcane | Earth, Ice |
+| Nature | Water, Earth | Fire, Arcane, Poison |
+| Lightning | Water, Machine | Earth |
+| Ice | Wind | Fire, Machine |
+| Light | Dark | Dark |
+| Dark | Light | Light |
+| Arcane | Machine, Nature | Wind, Machine |
+| Machine | Arcane, Ice, Poison | Lightning, Arcane |
+| Poison | Nature, Water | Wind, Machine |
+| None | Keine | Keine |
+
+None ist in beiden Richtungen elementneutral. Nicht aufgeführte offensive Paarungen gewähren keinen Elementvorteil; daraus entstehen keine zusätzlichen Resistenzen oder Immunitäten. Gegenseitige Vorteile wie Light/Dark und Arcane/Machine bleiben ausdrücklich bestehen: Beide Angriffsrichtungen haben den jeweiligen Vorteil.
+
+Die Neutralität gilt jeweils innerhalb des eigenen Systems: Unknown hebt keine Elementwirkung auf, None hebt keine Attributwirkung auf. Zahlenwerte für Vorteile, die rechnerische Kombination beider Systeme sowie mögliche Mehrfachtypen sind noch nicht festgelegt und werden hier nicht vorweggenommen.
+
+#### Visuelle Referenz und Verbindlichkeit
+
+Das Typechart-Mockup liegt unter [mocks/types.png](../mocks/types.png) (in der Aufgabenbeschreibung als `mocks/typesmock` bezeichnet). Es dient als visuelle Referenz für die tabellarische Darstellung, Elementicons und den getrennten Attributkreislauf. Es ist **keine technische Datenquelle**. Verbindlich sind ausschließlich die hier dokumentierten Regeln; abweichende Symbole, Pfeile, Legenden oder Texte im Bild ändern sie nicht. Insbesondere bedeutet eine neutrale Paarung keine Schadensimmunität, auch wenn die Mockup-Legende „No effect“ zeigt.
+
+### Monster-Artstyle und Toxipad
+
+Die verbindliche Artstyle-Referenz für zukünftige Monster ist [mocks/monster/prototypemonster1.png](../mocks/monster/prototypemonster1.png) (ursprünglich als `mocks/monster/prototypmonster` bezeichnet). [Prototyp 2](../mocks/monster/prototypemonster2.png) bleibt ebenfalls eine visuelle Designreferenz; beide ersetzen keine bestehende technische Monsterart.
+
+Die Zielrichtung ist eine **modernisierte PS1-3D-Monsterästhetik**, inspiriert vom Spielgefühl von Digimon World 1, mit eigenständigen Kreaturendesigns. Die Referenz konkretisiert dies durch klar lesbare Silhouetten, markante Proportionen, sichtbare kantige 3D-Formen und ausdrucksstarke Farbkontraste. Diese Richtung gilt für zukünftige Monstermodelle; die vorhandenen technischen Primitive sind weiterhin Platzhalter. Aus dem Bild werden keine verbindlichen Polygonzahlen, Texturauflösungen, Shader oder Animationsvorgaben abgeleitet.
+
+**Toxipad** ist ein grüner Giftfrosch mit lila Augen, lila Krallen und Stacheln, einer langen Zunge und markanten Proportionen. Er ist ein potenzieller Starter und Maskottchen-Kandidat. Der Name ist vorläufig; weder Starterrolle noch Maskottchenrolle sind endgültig entschieden. Das Konzept ist dem Element Poison zugeordnet; ein Attribut aus Angst/Fable/Wish/Unknown ist noch nicht festgelegt.
+
+Toxipad ist bislang eine Designreferenz, keine implementierte Monsterdefinition, kein neues Modell und kein Ersatz für den aktuellen Testbegleiter. Größen-, Gewichts- und Attackenangaben der Referenzbilder bleiben Mockup-Inhalte, solange sie nicht gesondert beschlossen werden. Gleiches gilt für andere dort abgebildete Kreaturen.
+
 ### Stats, Training und Evolution
 
-- Die sechs Attribute bleiben HP, MP, ATK, DEF, SPEED und BRAIN. Training verändert individuelle Werte.
+- Die sechs Stats bleiben HP, MP, ATK, DEF, SPEED und BRAIN. Training verändert individuelle Werte.
 - Evolution erhält trainierte Stats grundsätzlich; eine Evolution darf daher nicht einfach eine neue Instanz aus den Base Stats der Zielart erzeugen.
 - Permanente Evolutionsboni und -abzüge sollen standardmäßig additiv angewendet werden. Multiplikative Modifikatoren sollen später möglich sein, ohne mehrere widersprüchliche Kopien effektiver Stats zu pflegen.
 - Die sieben Stufen folgen Baby → Training → Kid → Teen → Adult → Ascended → Master.
@@ -112,7 +175,7 @@ Eine neue Art hinzufügen:
 
 ### Vitalwerte und Pflege
 
-Geplant sind Hunger, Fatigue, Happiness, Discipline, Poopmeter und Krankheiten. Current HP/MP existieren bereits, ihre Spielregeln fehlen noch. Pflegefehler sollen separat erfasste Ereignisse sein und nicht aus einem beliebigen Momentanwert rekonstruiert werden. Noch keine Wertebereiche, Änderungsraten oder Versorgungsaktionen implementieren.
+Hunger ist im MVP als Sättigung umgesetzt; hoher Wert bedeutet satt. Füttern sowie STARVATION- und OVERFEEDING-Ereignisse sind implementiert. Pflegefehler werden separat mit Ursache, Weltzeitpunkt und Instanz-ID gespeichert. Regeln, Grenzen und vorläufige Werte stehen in [LIFE_CARE_MVP.md](LIFE_CARE_MVP.md). Fatigue, Happiness, Discipline, Poopmeter und Krankheiten bleiben geplant. Current HP/MP existieren; Regeneration, Verbrauch und K.-o.-Folgen sind noch nicht simuliert.
 
 ### Leben und Tod
 
@@ -120,9 +183,9 @@ Standardmäßig tritt Tod nach dem **dritten relevanten K. o.** ein. Was ein rel
 
 ### Zeit und Schlaf
 
-Reale Zeit, Weltzeit und biologisches Alter sind verschiedene Konzepte. Regionen können unterschiedliche Zeitfaktoren besitzen; Training kann später Weltzeit verbrauchen. Wie diese Faktoren auf biologisches Alter wirken, ist vor der Simulation zu entscheiden.
+Reale Zeit, Weltzeit und biologisches Alter sind verschiedene Konzepte. Die zentrale Weltzeit ist implementiert: eine reale Minute entspricht einer Spielstunde; Pausen und Segmentübergänge erzeugen keinen normalen Fortschritt. Explizite Vorwärtsintervalle aktualisieren die Sättigung auch bei Zeitsprüngen. Regionale Faktoren sind technisch konfigurierbar; regionale Regeln und biologisches Alter sind nicht simuliert. Training kann später explizit Weltzeit verbrauchen.
 
-Es gibt keinen numerischen Sleepiness-Wert. Jede Art soll einen zeitbasierten Schlafrhythmus mit konfigurierbarer Schlafenszeit und Schlafdauer besitzen. Verspäteter Schlaf verschiebt grundsätzlich auch die Aufwachzeit. Fatigue und Schlafbedürfnis sind voneinander unabhängig. Noch keine Uhr, Zeitfaktoren, Schlafrhythmen oder Schlafzustände implementiert.
+Es gibt keinen numerischen Sleepiness-Wert. Jede Art soll einen zeitbasierten Schlafrhythmus mit konfigurierbarer Schlafenszeit und Schlafdauer besitzen. Verspäteter Schlaf verschiebt grundsätzlich auch die Aufwachzeit. Fatigue und Schlafbedürfnis sind voneinander unabhängig. Schlafrhythmen und Schlafzustände sind noch nicht implementiert.
 
 ### Monsterrollen, Modelle und Animationen
 
