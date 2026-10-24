@@ -25,11 +25,11 @@ func feed(monster: MonsterInstance, inventory: Inventory, item: Resource, at_sec
 	var requirement := monster.definition.food_requirement
 	if requirement <= 0 or not is_finite(requirement) or not is_finite(gain / requirement) or gain <= 0 or not is_finite(at_seconds):
 		return &"FEED_UNSUPPORTED"
+	var effective_gain := gain / requirement
+	if effective_gain <= 0:
+		return &"FEED_UNSUPPORTED" # Finite division may still underflow to zero.
 	_busy = true
-	# Commit inventory before notifying monster listeners; no partially consumed
-	# inventory notifications and no re-entrant feeding from synchronous signals.
-	inventory.remove(item.item_id, 1, false)
-	monster.receive_food(gain / requirement, at_seconds)
-	inventory.changed.emit()
+	var accepted := inventory.consume_if(item.item_id, 1,
+		monster.receive_food.bind(effective_gain, at_seconds))
 	_busy = false
-	return &"FEED_OK"
+	return &"FEED_OK" if accepted else &"FEED_REFUSED"

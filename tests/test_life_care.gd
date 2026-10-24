@@ -1,6 +1,21 @@
 extends SceneTree
 
 const Clock = preload("res://scripts/life/world_clock.gd")
+
+class RejectingMonster:
+	extends MonsterInstance
+	var attempts := 0
+	var on_receive: Callable
+
+	func _init(source: MonsterDefinition) -> void:
+		super(source)
+
+	func receive_food(_gain: float, _at_seconds: float) -> bool:
+		attempts += 1
+		if on_receive.is_valid():
+			on_receive.call()
+		return false
+
 var checks := 0
 var failures := 0
 
@@ -128,7 +143,59 @@ func item_tests() -> void:
 	check(feeding.feed(second, inv, invalid_item, 100) == &"FEED_UNSUPPORTED" and inv.quantity(&"test_food") == 1, "Unsupported effect consumes nothing")
 	var event_count := jumped_event_test()
 	check(event_count == 1, "Clearing history does not duplicate ongoing starvation")
+	feeding_transaction_tests()
 	await menu_tests()
+
+func feeding_transaction_tests() -> void:
+	var catalog := load("res://data/items/catalog.tres")
+	var Inventory = load("res://scripts/items/inventory.gd")
+	var Feeding = load("res://scripts/items/feeding_service.gd")
+	var apple: Resource = catalog.get_item(&"apple")
+	var definition := MonsterRegistry.new().get_monster(&"drako")
+	var rejected := RejectingMonster.new(definition)
+	var service = Feeding.new()
+	var inv = Inventory.new(2)
+	inv.add(apple, 25)
+	var before: Array = inv.stacks()
+	var notifications := {"count": 0}
+	inv.changed.connect(func(): notifications.count += 1)
+	check(service.feed(rejected, inv, apple, 100) == &"FEED_REFUSED" and rejected.attempts == 1, "Consumer rejection is reported instead of success")
+	check(inv.stacks() == before and notifications.count == 0, "Rejected consumption restores exact multi-stack inventory without notification")
+	check(rejected.satiety == 100 and rejected.care_events().is_empty(), "Rejected feeding leaves monster and care history unchanged")
+	# Reserve the last item, then attempt to occupy its slot during rejection.
+	inv = Inventory.new(1)
+	inv.add(apple, 1)
+	var mutations := {"add": true, "remove": true, "capacity": true}
+	rejected.on_receive = func():
+		mutations.add = inv.add(catalog.get_item(&"mushroom"), 1)
+		mutations.remove = inv.remove(&"apple", 1)
+		mutations.capacity = inv.set_capacity(0)
+	check(service.feed(rejected, inv, apple, 100) == &"FEED_REFUSED" and inv.quantity(&"apple") == 1 and inv.stacks().size() == 1, "Last-item rollback cannot lose its slot")
+	check(not mutations.add and not mutations.remove and not mutations.capacity and inv.capacity == 1, "Pending consumer cannot invalidate rollback through inventory mutations")
+	check(not inv.consume_if(&"apple", 1, func(): return null) and inv.quantity(&"apple") == 1, "Unexpected consumer result also rolls back consumption")
+	var monster := MonsterInstance.create(definition)
+	monster.satiety = 0
+	check(service.feed(monster, inv, apple, 100) == &"FEED_OK" and inv.quantity(&"apple") == 0 and monster.satiety == 10, "Locks release after rejection; later success consumes exactly one")
+	var attempts := rejected.attempts
+	check(service.feed(rejected, inv, apple, 100) == &"FEED_NO_ITEM" and rejected.attempts == attempts, "Missing item never calls consumer")
+	var tiny_food: Resource = apple.duplicate(true)
+	tiny_food.effects[0].value = 1.0e-300
+	var huge_requirement := definition.duplicate() as MonsterDefinition
+	huge_requirement.food_requirement = 1.0e300
+	monster = MonsterInstance.create(huge_requirement)
+	inv.add(tiny_food, 1)
+	check(service.feed(monster, inv, tiny_food, 100) == &"FEED_UNSUPPORTED" and inv.quantity(tiny_food.item_id) == 1, "Underflow to zero never consumes food")
+	# Different service objects must not consume the same pending transaction.
+	inv = Inventory.new(1)
+	inv.add(apple, 3)
+	monster = MonsterInstance.create(definition)
+	monster.satiety = 0
+	var other = Feeding.new()
+	var nested := {"result": &""}
+	var nested_feed := func(): nested.result = other.feed(monster, inv, apple, 100)
+	monster.changed.connect(nested_feed)
+	check(service.feed(monster, inv, apple, 100) == &"FEED_OK" and nested.result != &"FEED_OK" and inv.quantity(&"apple") == 2 and monster.satiety == 10, "Another service cannot consume during pending monster signals")
+	monster.changed.disconnect(nested_feed)
 
 func jumped_event_test() -> int:
 	var monster := MonsterInstance.create(MonsterRegistry.new().get_monster(&"drako"))

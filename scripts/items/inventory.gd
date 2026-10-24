@@ -6,6 +6,7 @@ const Item = preload("res://scripts/items/item_definition.gd")
 const MAX_QUANTITY := 1000000
 var _capacity: int
 var _stacks: Array[Dictionary] = []
+var _consuming := false
 var capacity: int:
 	get:
 		return _capacity
@@ -14,7 +15,7 @@ func _init(slot_capacity: int = 20) -> void:
 	_capacity = clampi(slot_capacity, 0, 1000)
 
 func set_capacity(value: int) -> bool:
-	if value < _stacks.size() or value < 0 or value > 1000:
+	if _consuming or value < _stacks.size() or value < 0 or value > 1000:
 		return false
 	_capacity = value
 	changed.emit()
@@ -44,7 +45,7 @@ func can_add(item: Resource, count: int) -> bool:
 	return required <= _capacity - _stacks.size()
 
 func add(item: Resource, count: int) -> bool:
-	if not can_add(item, count):
+	if _consuming or not can_add(item, count):
 		return false
 	var remaining := count
 	for stack in _stacks:
@@ -60,7 +61,7 @@ func add(item: Resource, count: int) -> bool:
 	return true
 
 func remove(id: StringName, count: int, notify: bool = true) -> bool:
-	if count <= 0 or count > MAX_QUANTITY or quantity(id) < count:
+	if _consuming or count <= 0 or count > MAX_QUANTITY or quantity(id) < count:
 		return false
 	var remaining := count
 	for index in range(_stacks.size() - 1, -1, -1):
@@ -76,3 +77,21 @@ func remove(id: StringName, count: int, notify: bool = true) -> bool:
 	if notify:
 		changed.emit()
 	return true
+
+# Reserve before calling the consumer so its signal listeners see the reduced
+# stock. A refusal restores the exact stacks without publishing a failed change.
+func consume_if(id: StringName, count: int, accept: Callable) -> bool:
+	if _consuming or not accept.is_valid():
+		return false
+	var before := _stacks.duplicate(true)
+	if not remove(id, count, false):
+		return false
+	_consuming = true
+	var result: Variant = accept.call()
+	var accepted: bool = result is bool and result
+	if not accepted:
+		_stacks.assign(before)
+	_consuming = false
+	if accepted:
+		changed.emit()
+	return accepted
