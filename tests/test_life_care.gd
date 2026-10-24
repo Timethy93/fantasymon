@@ -292,6 +292,7 @@ func integration_tests() -> void:
 		root.get_node("WorldTime").advance_hours(2)
 		view.refresh()
 		check(monster.care_events().size() == 1 and not view.history.text.is_empty(), "Debug time jump simulates and displays starvation")
+		debug_time_tests(view, monster)
 		menus.close_menu()
 	var monster: MonsterInstance = root.get_node("CompanionManager").active_monster
 	var identity := monster.instance_id
@@ -312,6 +313,66 @@ func integration_tests() -> void:
 	check(clock.total_seconds > before and monster.satiety < 55, "Simulation resumes after transition")
 	await keyboard_tests()
 	await layout_tests()
+
+func debug_time_tests(view: Control, monster: MonsterInstance) -> void:
+	var clock := root.get_node("WorldTime")
+	var event: RefCounted = monster.care_events()[0]
+	var timestamp: float = event.world_seconds
+	var satiety := monster.satiety
+	var hp := monster.current_hp
+	var mp := monster.current_mp
+	view.numbers.world_day.value = 1
+	view.numbers.world_hour.value = 0
+	view.numbers.world_minute.value = 0
+	view.set_time()
+	check(clock.total_seconds == 0 and monster.satiety == satiety and monster.current_hp == hp and monster.current_mp == mp, "Debug backward time setting changes no monster vitals or satiety")
+	check(monster.care_events().size() == 1 and event.world_seconds == timestamp, "Direct time setting preserves care events and their timestamps")
+	check(view.numbers.world_day.min_value == 1 and view.numbers.world_hour.min_value == 0 and view.numbers.world_hour.max_value == 23 and view.numbers.world_minute.max_value == 59 and view.numbers.jump_days.min_value == 0 and view.numbers.jump_hours.min_value == 0 and view.numbers.jump_minutes.min_value == 0, "Debug time inputs constrain calendar fields and prevent negative durations")
+	view.numbers.world_day.value = 2
+	view.numbers.world_hour.value = 23
+	view.numbers.world_minute.get_line_edit().text = "30"
+	view.numbers.world_minute.apply()
+	view.set_time()
+	check(clock.day() == 2 and clock.hour() == 23 and clock.minute() == 30 and monster.care_events().size() == 1, "Day/hour/minute input commits pending text without simulating care")
+	monster.debug_clear_care_events()
+	monster.debug_set_satiety(8)
+	view.numbers.jump_days.value = 1
+	view.numbers.jump_hours.value = 1
+	view.numbers.jump_minutes.value = 30
+	view.advance_time()
+	check(clock.day() == 4 and clock.hour() == 1 and clock.minute() == 0 and monster.satiety == 0, "Debug duration simulates across days using care logic")
+	check(monster.care_events().size() == 1, "Simulated debug duration records starvation once")
+	event = monster.care_events()[0]
+	check(event.world_seconds == 2 * 86400 + 1800 and event.instance_id == monster.instance_id, "Simulated event retains exact crossing and monster identity")
+	var previous_locale := TranslationServer.get_locale()
+	for locale in ["en", "de"]:
+		TranslationServer.set_locale(locale)
+		view.refresh()
+		check(view.history.text.contains(TranslationServer.translate("CARE_EVENT_STARVATION")) and view.history.text.contains("3") and view.history.text.contains("00:30") and view.history.text.contains(String(monster.instance_id)), "Debug care history shows translated cause and event date: " + locale)
+	TranslationServer.set_locale(previous_locale)
+	view.refresh()
+	var saved_history: String = view.history.text
+	view.numbers.world_day.value = 1
+	view.numbers.world_hour.value = 0
+	view.numbers.world_minute.value = 0
+	view.set_time()
+	check(view.history.text == saved_history and event.world_seconds == 2 * 86400 + 1800, "Care history date remains unchanged after resetting clock backwards")
+	var before: float = clock.total_seconds
+	view.numbers.jump_days.value = 0
+	view.numbers.jump_hours.value = 0
+	view.numbers.jump_minutes.value = 0
+	view.advance_time()
+	check(clock.total_seconds == before and view.result.text == "DEBUG_DURATION_INVALID" and monster.care_events().size() == 1, "Zero duration is rejected without simulation")
+	view.numbers.world_day.value = view.numbers.world_day.max_value
+	view.numbers.world_hour.value = 23
+	view.numbers.world_minute.value = 59
+	view.set_time()
+	check(clock.total_seconds == before and view.result.text == "DEBUG_TIME_INVALID", "Out-of-range absolute time is rejected")
+	clock.debug_set_seconds(clock.MAX_WORLD_SECONDS - 30)
+	view.numbers.jump_minutes.value = 1
+	view.advance_time()
+	check(clock.total_seconds == clock.MAX_WORLD_SECONDS - 30 and view.result.text == "DEBUG_DURATION_INVALID", "Duration beyond clock limit is rejected")
+	clock.debug_set_seconds(before)
 
 func layout_tests() -> void:
 	var previous_size := root.content_scale_size

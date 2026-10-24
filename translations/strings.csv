@@ -4,6 +4,17 @@ MENU_DEBUG,Debug,Debug
 DEBUG_DIRECT,Direct test state — no simulation,Direkter Testzustand — keine Simulation
 DEBUG_WORLD_HOURS,World time in total hours,Weltzeit in Gesamtstunden
 DEBUG_SET_TIME,Set time directly,Zeit direkt setzen
+DEBUG_DAY,Day,Tag
+DEBUG_HOUR,Hour,Stunde
+DEBUG_MINUTE,Minute,Minute
+DEBUG_DURATION_DAYS,Days to advance,Tage vorspulen
+DEBUG_DURATION_HOURS,Hours to advance,Stunden vorspulen
+DEBUG_DURATION_MINUTES,Minutes to advance,Minuten vorspulen
+DEBUG_TIME_SET,World time set without simulation.,Weltzeit ohne Simulation gesetzt.
+DEBUG_TIME_ADVANCED,Time interval simulated.,Zeitintervall simuliert.
+DEBUG_TIME_INVALID,Time exceeds the supported world time range.,Zeit überschreitet den unterstützten Weltzeitbereich.
+DEBUG_DURATION_INVALID,Enter a positive duration within the remaining world time range.,Eine positive Dauer innerhalb des verbleibenden Weltzeitbereichs eingeben.
+DEBUG_EVENT_ENTRY,{cause} · Day {day} at {time} · {id},{cause} · Tag {day} um {time} · {id}
 DEBUG_SIMULATE,Regular simulation,Reguläre Simulation
 DEBUG_JUMP_HOURS,Advance by game hours,Um Spielstunden vorspulen
 DEBUG_ADVANCE,Simulate time interval,Zeitintervall simulieren
